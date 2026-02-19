@@ -4,6 +4,71 @@ An AI-native, entity-driven SaaS application framework. Define your business ent
 
 **The 80% of SaaS infrastructure you rebuild every time, solved once.**
 
+## The Five Layers
+
+```mermaid
+flowchart TB
+    subgraph L1 ["<b>ADAPTER LAYER</b> — the interfaces"]
+        direction LR
+        REST["REST API<br/><i>HTTP → Action Bus</i>"]
+        WEBUI["Web UI<br/><i>Next.js 15 · dynamic<br/>from entity metadata</i>"]
+        CHAT["AI Chat (Cmd+K)<br/><i>Natural language<br/>→ Action Bus</i>"]
+        EVT["Event Subscribers<br/><i>React to domain<br/>events</i>"]
+    end
+
+    subgraph L2 ["<b>AI LAYER</b> — intelligence"]
+        direction LR
+        GW["AI Gateway<br/><i>Gemini · OpenAI · Anthropic</i>"]
+        CMD["Command Interpreter<br/><i>Maps intent → actions</i>"]
+        GEN["Entity Generator<br/><i>Prose → TypeScript<br/>+ writes to disk</i>"]
+    end
+
+    subgraph L3 ["<b>PLATFORM LAYER</b> — the engine"]
+        direction LR
+        BUS["Action Bus<br/><i>Validate · Authorize<br/>Execute · Audit</i>"]
+        DB["Database<br/><i>Auto-migration<br/>Multi-tenant</i>"]
+        AUTH["Auth / RBAC<br/><i>JWT · Permissions<br/>Supabase or Dev</i>"]
+        WF["Workflows<br/><i>State machines<br/>Transition validation</i>"]
+    end
+
+    subgraph L4 ["<b>DOMAIN LAYER</b> — your business logic"]
+        direction LR
+        ENT["Entities<br/><i>defineEntity()</i>"]
+        HOOKS["Hooks<br/><i>beforeCreate<br/>afterUpdate</i>"]
+        SUBS["Subscribers<br/><i>React to events<br/>side effects</i>"]
+        SEED["Seed Data<br/><i>Demo records<br/>per entity</i>"]
+    end
+
+    subgraph L5 ["<b>CONTRACTS</b> — the boundary"]
+        direction LR
+        TYPES["TypeScript Interfaces<br/><i>EntityDefinition · ActionDefinition<br/>Caller · Workflow · Permission</i>"]
+        ZOD["Zod Schemas<br/><i>Runtime validation<br/>per field type</i>"]
+    end
+
+    L1 --> L2
+    L2 --> L3
+    L1 --> L3
+    L3 --> L5
+    L4 --> L5
+    L3 ~~~ L4
+
+    style L1 fill:#2d1b69,stroke:#8b5cf6,color:#fff
+    style L2 fill:#1e3a5f,stroke:#3b82f6,color:#fff
+    style L3 fill:#0f3460,stroke:#e94560,color:#fff
+    style L4 fill:#1a472a,stroke:#22c55e,color:#fff
+    style L5 fill:#1a1a2e,stroke:#6b7280,color:#fff
+```
+
+| Layer | What it does | You touch it? |
+|-------|-------------|---------------|
+| **Adapters** | Translate external interfaces (HTTP, browser, AI chat, events) into Action Bus calls | No — auto-generated from entity definitions |
+| **AI** | Multi-provider gateway, natural language → action mapping, entity code generation | No — configure an API key and it works |
+| **Platform** | The engine: pipeline validation, RBAC, database, workflows, audit logging | No — it reads your entity definitions and does everything |
+| **Domain** | Your entities, fields, relationships, workflows, hooks, subscribers | **Yes — this is the only code you write** |
+| **Contracts** | Shared TypeScript interfaces that both Platform and Domain import | Rarely — extend when adding new field types or capabilities |
+
+The key architectural rule: **Domain and Platform never import each other.** Both import only from Contracts. The API app wires them together at runtime. This means the platform can evolve (new features, performance, providers) without touching a single line of your business logic.
+
 ## How It Works
 
 There are two ways to build with MetaSAAS. Both produce the same result — a fully operational entity with CRUD, API, UI, workflows, and AI integration.

@@ -23,6 +23,9 @@ Thumbs.db
 # Turbo
 .turbo/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Postgres data (if running outside Docker)
 pgdata/
 

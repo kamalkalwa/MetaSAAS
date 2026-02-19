@@ -11,8 +11,8 @@
 
 import { test, expect } from "playwright/test";
 
-const TEST_EMAIL = "admin@metasaas.dev";
-const TEST_PASSWORD = "Test1234!";
+const TEST_EMAIL = process.env.TEST_EMAIL ?? "admin@metasaas.dev";
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "Test1234!";
 
 test.describe("Login Flow", () => {
   test("unauthenticated user is redirected to /login", async ({ page }) => {

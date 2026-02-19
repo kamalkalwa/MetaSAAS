@@ -12,8 +12,8 @@
 
 import { test, expect } from "playwright/test";
 
-const TEST_EMAIL = "admin@metasaas.dev";
-const TEST_PASSWORD = "Test1234!";
+const TEST_EMAIL = process.env.TEST_EMAIL ?? "admin@metasaas.dev";
+const TEST_PASSWORD = process.env.TEST_PASSWORD ?? "Test1234!";
 
 /**
  * Shared auth state: log in once and reuse across tests in this file.
