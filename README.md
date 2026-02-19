@@ -1,17 +1,47 @@
 # MetaSAAS
 
-An AI-native, entity-driven SaaS application framework. Define your business entities declaratively and get a full production-grade application — CRUD API, database, dynamic UI, auth, multi-tenancy, and workflow engine — automatically.
+An AI-native, entity-driven SaaS application framework. Define your business entities — through code **or** conversation — and get a full production-grade application automatically.
 
 **The 80% of SaaS infrastructure you rebuild every time, solved once.**
 
-```
-Traditional app:     Code is the product.
-MetaSAAS app:        BLUEPRINTs are the product. Code is the output.
+## How It Works
+
+There are two ways to build with MetaSAAS. Both produce the same result — a fully operational entity with CRUD, API, UI, workflows, and AI integration.
+
+```mermaid
+flowchart TB
+    subgraph entry ["Two Ways to Build"]
+        direction LR
+        CODE["<b>Code Path</b><br/>Write defineEntity() in TypeScript<br/><i>Full control, version-controlled</i>"]
+        AI["<b>AI Path</b> (Cmd+K in UI)<br/>'Build me a gym management system'<br/><i>Generates entity files + writes to disk</i>"]
+    end
+
+    CODE --> DEF["Entity Definition<br/>fields · relationships · workflows · UI config"]
+    AI --> GEN["AI Entity Generator"] --> DEF
+
+    DEF --> BUS["<b>Action Bus</b><br/>Validate (Zod) → Authorize (RBAC) → Execute → Audit Log"]
+
+    BUS --> API["<b>REST API</b><br/>GET · POST · PATCH · DELETE<br/>+ /transitions endpoint"]
+    BUS --> UI["<b>Dynamic UI</b><br/>List · Detail · Forms<br/>Kanban · Calendar"]
+    BUS --> DB["<b>Database</b><br/>Auto-migration<br/>Multi-tenant isolation"]
+    BUS --> WF["<b>Workflow Engine</b><br/>State machines<br/>Transition validation"]
+
+    style entry fill:#1a1a2e,stroke:#e94560,color:#fff
+    style BUS fill:#0f3460,stroke:#e94560,color:#fff
+    style DEF fill:#16213e,stroke:#0f3460,color:#fff
+    style API fill:#1a1a2e,stroke:#533483,color:#fff
+    style UI fill:#1a1a2e,stroke:#533483,color:#fff
+    style DB fill:#1a1a2e,stroke:#533483,color:#fff
+    style WF fill:#1a1a2e,stroke:#533483,color:#fff
 ```
 
-## What You Get
+**Both paths converge at the same Action Bus.** A button click, a REST call, an AI command, and an event subscriber all go through the same validation, authorization, execution, and audit pipeline. No backdoors.
 
-Define an entity like this:
+---
+
+### Path A: Code
+
+Define an entity in TypeScript. You get full IDE support, version control, and explicit control over every field, workflow, and UI option.
 
 ```typescript
 export const TaskEntity = defineEntity({
@@ -30,20 +60,11 @@ export const TaskEntity = defineEntity({
 });
 ```
 
-And the platform gives you:
+Register it, run `pnpm db:migrate`, restart — full CRUD, API, UI, workflows, AI integration, audit logging.
 
-- **5 CRUD actions** (create, findAll, findById, update, delete) through the Action Bus
-- **REST API** (`GET /api/entities/tasks`, `POST`, `PATCH`, `DELETE`)
-- **Database table** with auto-migration and schema evolution
-- **Dynamic UI** (list view, detail page, create/edit forms, kanban board, calendar)
-- **AI integration** (Cmd+K: "create a task called Fix login bug with high priority")
-- **Workflow enforcement** (invalid state transitions are rejected with valid alternatives)
-- **Audit logging** (every action recorded to `audit_log` table)
-- **Multi-tenancy** (data isolation per tenant, enforced at database level)
+### Path B: AI Chat Sidebar
 
-## AI Entity Generation
-
-Describe a business domain in natural language and MetaSAAS generates the complete entity definitions, writes them to disk, and registers them:
+Open the AI assistant (Cmd+K in the web UI) and describe what you need in plain English:
 
 ```
 You: "I want to build a gym management system"
@@ -54,15 +75,29 @@ AI generates:
   → Class (6 fields, belongsTo Trainer, calendar view)
   → Enrollment (3 fields, belongsTo Member + Class)
 
-Files written:
+Files written to disk:
   → packages/domain/src/entities/member/member.entity.ts
   → packages/domain/src/entities/member/BLUEPRINT.md
   → packages/domain/src/entities/trainer/trainer.entity.ts
-  → ... (8 files total)
-  → packages/domain/src/index.ts (updated with imports + navigation)
+  → ... (8 files total + seed data)
+  → packages/domain/src/index.ts (updated with imports, navigation, seed data)
 ```
 
-Restart the dev server and the new domain is fully operational — CRUD, API, UI, AI, workflows.
+Restart the dev server and the entire domain is operational. The generated code is standard TypeScript — you can review, edit, and version-control it like any code you wrote by hand.
+
+### What Each Entity Gets You
+
+Regardless of which path you take:
+
+- **5 CRUD actions** (create, findAll, findById, update, delete) through the Action Bus
+- **REST API** (`GET /api/tasks`, `POST`, `PATCH`, `DELETE`)
+- **Transitions API** (`GET /api/tasks/:id/transitions` — valid next states)
+- **Database table** with auto-migration and schema evolution
+- **Dynamic UI** (list view, detail page, create/edit forms, kanban board, calendar)
+- **AI commands** (Cmd+K: "create a task called Fix login bug with high priority")
+- **Workflow enforcement** (invalid state transitions rejected with valid alternatives)
+- **Audit logging** (every action recorded to `audit_log` table)
+- **Multi-tenancy** (data isolation per tenant, enforced at database level)
 
 ## Quick Start
 
@@ -121,9 +156,40 @@ GOOGLE_AI_API_KEY=your-key            # for Gemini
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    subgraph apps ["Apps (runtime)"]
+        WEB["web<br/><i>Next.js 15</i>"]
+        API["api<br/><i>Fastify</i>"]
+    end
+
+    subgraph packages ["Packages (libraries)"]
+        direction TB
+        DOMAIN["domain<br/><i>YOUR entities, workflows,<br/>subscribers</i>"]
+        PLATFORM["platform<br/><i>Action Bus, DB, Auth,<br/>AI, Events</i>"]
+        CONTRACTS["contracts<br/><i>Shared TypeScript interfaces</i>"]
+        UI_PKG["ui<br/><i>Shared components</i>"]
+    end
+
+    WEB --> API
+    API --> PLATFORM
+    API --> DOMAIN
+    WEB --> UI_PKG
+    DOMAIN --> CONTRACTS
+    PLATFORM --> CONTRACTS
+    DOMAIN x--x PLATFORM
+
+    style DOMAIN fill:#0f3460,stroke:#e94560,color:#fff
+    style CONTRACTS fill:#16213e,stroke:#533483,color:#fff
+    style PLATFORM fill:#16213e,stroke:#533483,color:#fff
+    style apps fill:#1a1a2e,stroke:#533483,color:#fff
+```
+
+**Domain** only imports from **Contracts**. **Platform** only imports from **Contracts**. Neither imports from the other (the `x` in the diagram). This hard boundary is what enables "define once, get everything" — the platform can evolve without touching your domain code, and your domain code is pure business logic with zero infrastructure concerns.
+
 ```
 packages/
-  contracts/   → Shared TypeScript interfaces (platform ↔ domain boundary)
+  contracts/   → Shared TypeScript interfaces (the boundary between platform and domain)
   platform/    → Infrastructure engine — Action Bus, DB, auth, AI, events
   domain/      → YOUR business entities, workflows, subscribers (the ONLY code you write)
   ui/          → Shared UI components
@@ -132,15 +198,15 @@ apps/
   web/         → Next.js 15 frontend (renders entities dynamically from metadata)
 ```
 
-**Domain** only imports from **Contracts**. **Platform** only imports from **Contracts**. Neither imports from the other. This separation is what enables "define once, get everything" and future platform updates without touching domain code.
-
 ### Action Bus
 
-Every operation flows through the same pipeline — whether triggered by a button click, REST call, AI command, or event subscriber:
+Every operation — whether triggered by a button click, REST call, AI command, or event subscriber — flows through the same pipeline:
 
 ```
 Request → Validate (Zod) → Authorize (RBAC) → [Before Hook] → Execute → [After Hook] → Side Effects → Audit Log → Response
 ```
+
+There is no "admin bypass" or "AI shortcut." The same Zod schema validates the input, the same RBAC rules check permissions, the same workflow engine enforces state transitions, and the same audit log records the action — regardless of who or what triggered it.
 
 ### Three Layers of Complexity
 
@@ -164,15 +230,22 @@ The Gym domain was generated entirely by the AI from a single prompt — proving
 
 ## Adding a New Entity
 
+**Through code:**
+
 1. Create `packages/domain/src/entities/{name}/` directory
 2. Read `packages/domain/src/entities/BLUEPRINT.md` for the full pattern
 3. Define `{name}.entity.ts` with fields, relationships, UI config
 4. Create a `BLUEPRINT.md` explaining what this entity represents
 5. Register in `packages/domain/src/index.ts` (entities, navigation, seed data)
-6. Run `pnpm db:migrate`
-7. Restart — entity appears with full CRUD, API, and UI
+6. Run `pnpm db:migrate` — restart — entity is fully operational
 
-Or just open the AI chat sidebar and describe what you want to build.
+**Through the AI assistant:**
+
+1. Open the chat sidebar (Cmd+K in the web UI)
+2. Describe the domain: *"I need to manage invoices with line items and payment tracking"*
+3. The AI generates entity files, BLUEPRINT.md docs, seed data, and registers everything
+4. Run `pnpm db:migrate` — restart — domain is fully operational
+5. Review and edit the generated files as needed — it's standard TypeScript
 
 ## Commands
 
