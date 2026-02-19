@@ -1,0 +1,29 @@
+{
+  "name": "@metasaas/platform",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Platform engine — Action Bus, database, adapters. Never modified for business logic.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@metasaas/contracts": "workspace:*",
+    "@supabase/supabase-js": "^2.95.3",
+    "drizzle-orm": "^0.38",
+    "fastify": "^5",
+    "postgres": "^3.4",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "drizzle-kit": "^0.30",
+    "typescript": "^5.7"
+  }
+}

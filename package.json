@@ -1,0 +1,28 @@
+{
+  "name": "metasaas",
+  "version": "0.0.1",
+  "private": true,
+  "description": "MetaSAAS — AI-native, entity-driven SaaS application framework",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "db:migrate": "turbo run db:migrate --filter=@metasaas/api",
+    "db:seed": "turbo run db:seed --filter=@metasaas/api",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:e2e": "npx playwright test"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
+    "playwright": "^1.58.2",
+    "turbo": "^2",
+    "typescript": "^5.7",
+    "vitest": "^4.0.18"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@metasaas/domain",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Domain layer — your business entities, actions, and workflows",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@metasaas/contracts": "workspace:*",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.7"
+  }
+}

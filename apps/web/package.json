@@ -1,0 +1,43 @@
+{
+  "name": "@metasaas/web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Next.js frontend — renders entities dynamically from definitions",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "clean": "rm -rf .next",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@metasaas/contracts": "workspace:*",
+    "@metasaas/ui": "workspace:*",
+    "@radix-ui/react-slot": "^1.1",
+    "@supabase/supabase-js": "^2.95.3",
+    "class-variance-authority": "^0.7",
+    "clsx": "^2",
+    "lucide-react": "^0.475",
+    "next": "^15",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwind-merge": "^3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.4",
+    "dotenv": "^16",
+    "jsdom": "^28.1.0",
+    "tailwindcss": "^4",
+    "typescript": "^5.7"
+  }
+}

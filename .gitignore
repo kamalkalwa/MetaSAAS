@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Environment (secrets)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Postgres data (if running outside Docker)
+pgdata/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Debug artifacts
+*-screenshots/
+*.png
