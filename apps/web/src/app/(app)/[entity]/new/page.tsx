@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   fetchEntityMeta,
@@ -36,6 +36,7 @@ function getFkFieldName(rel: { entity: string; foreignKey?: string }): string {
 export default function EntityCreatePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const entitySlug = params.entity as string;
 
   const [entity, setEntity] = useState<EntityDefinition | null>(null);
@@ -106,6 +107,12 @@ export default function EntityCreatePage() {
               description: `Select the ${rel.entity} this belongs to`,
             },
           });
+        }
+
+        // Pre-fill FK fields from URL query params (e.g., ?companyId=uuid)
+        for (const { fkName } of syntheticFields) {
+          const prefill = searchParams.get(fkName);
+          if (prefill) defaults[fkName] = prefill;
         }
 
         setFormData(defaults);

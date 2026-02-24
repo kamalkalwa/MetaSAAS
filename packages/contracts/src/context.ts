@@ -120,6 +120,8 @@ export interface DatabaseClient {
     entity: string,
     options?: {
       where?: Record<string, unknown>;
+      /** ILIKE search across specified fields */
+      search?: { term: string; fields: string[] };
       orderBy?: { field: string; direction: "asc" | "desc" };
       limit?: number;
       offset?: number;
@@ -146,5 +148,9 @@ export interface DatabaseClient {
   delete(entity: string, id: string): Promise<boolean>;
 
   /** Count records matching optional filter */
-  count(entity: string, where?: Record<string, unknown>): Promise<number>;
+  count(
+    entity: string,
+    where?: Record<string, unknown>,
+    search?: { term: string; fields: string[] }
+  ): Promise<number>;
 }

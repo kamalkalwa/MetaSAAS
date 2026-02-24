@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+*.tsbuildinfo
+.env
+.git
+.cursor
+.DS_Store
+test-results
+playwright-report
+blob-report
+*-screenshots
+*.png
+e2e
+PRODUCT-OPPORTUNITIES.md

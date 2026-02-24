@@ -14,6 +14,9 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@metasaas/contracts": "workspace:*",
     "@metasaas/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.1",

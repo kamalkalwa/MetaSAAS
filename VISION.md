@@ -471,6 +471,58 @@ The ultimate measure of MetaSAAS is not lines of code or feature count. It is:
 
 ---
 
+### Phase 8: Close UX Gaps + Scale + Complete AI Story + Production Deploy ✅ COMPLETE
+
+**Goal**: Transform MetaSAAS from "technically works" to "obviously works" — close the
+UX gaps that confuse users, make it usable at real-world data volumes, complete the
+AI lifecycle (create → iterate → evolve), and make it deployable in 10 minutes.
+
+**What was built (10 improvements across 4 sub-phases)**:
+
+**Phase A — Close the UX gaps:**
+- Workflow-aware status controls — edit forms show only valid next states, detail pages
+  show transition buttons ("Start Work", "Complete"), cryptic 422 errors replaced with
+  human-readable messages
+- Kanban drag-and-drop — cards drag between columns with @dnd-kit, invalid moves bounce
+  back with explanation, visual green/red feedback while hovering, optimistic UI with
+  rollback on failure
+- Related records on detail page — Company shows its Contacts, Doctor shows Appointments,
+  reverse-relationship lookup from entity definitions, "+ Add" button pre-fills FK
+
+**Phase B — Make it usable at scale:**
+- Search and filtering — ILIKE text search across entity searchFields, per-enum dropdown
+  filters, debounced queries, backend + frontend implementation
+- Dashboard improvements — quick action buttons, workflow state overview with progress bars,
+  recent activity feed (last 8 records), getting-started guide for empty tenants
+- Bulk operations — checkbox selection, select-all, bulk status change via dropdown,
+  bulk delete with confirmation, actions bar with progress indication
+
+**Phase C — Complete the AI story:**
+- Entity field evolution via AI — `domain.modify` action reads existing entity files from
+  disk, sends to AI with modification request, writes updated file back. "Add a dueDate
+  field to Task" or "Remove phone from Contact" from the AI chat sidebar
+
+**Phase D — Production-ready:**
+- Deploy story — multi-stage Dockerfiles for API and Web, production docker-compose with
+  Postgres + API + Web, .env.example with all configuration documented, .dockerignore
+- Import / export — client-side CSV export (downloads immediately), CSV import modal with
+  file upload, header-to-field mapping, per-row error reporting
+- Webhook notifications — Event Bus integration via wildcard subscriber, REST API for
+  webhook CRUD, HTTP POST delivery with 10s timeout, exponential backoff retry (3 attempts),
+  delivery log per webhook
+
+**Key architecture decisions:**
+- All new features follow the existing contract patterns — no new abstractions
+- Kanban DnD, bulk ops, and search all flow through the same Action Bus pipeline
+- Entity evolution reads/writes actual TypeScript files — the developer always owns the code
+- Webhooks subscribe to the existing Event Bus — zero changes to the event infrastructure
+- CSV import creates records through the standard `createEntity` API — same validation,
+  same permissions, same audit logging
+
+**Milestone**: "Define, iterate, evolve, deploy — the full lifecycle." ✅
+
+---
+
 *Last updated: February 2026*
-*Phase 0-7 + Phase B + Phase B2 (Gym): Complete.*
+*Phase 0-8 + Phase B + Phase B2 (Gym): Complete.*
 *Entities: 13 across 5 domains. Tests: 334 unit + 14 E2E = 348 total.*
