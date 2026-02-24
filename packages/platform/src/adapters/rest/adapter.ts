@@ -26,6 +26,12 @@ import { getAuthProvider } from "../../auth/index.js";
 import { authMiddleware } from "./auth-middleware.js";
 import { interpretCommand } from "../../ai/command.js";
 import {
+  registerWebhook,
+  removeWebhook,
+  listWebhooks,
+  getDeliveryLog,
+} from "../../core/webhooks/index.js";
+import {
   createSession,
   listSessions,
   getSession,
@@ -509,12 +515,21 @@ export async function registerRESTRoutes(app: FastifyInstance) {
      * or guessing internal column names.
      */
     const allowedFilterFields = new Set(entity.fields.map((f) => f.name));
+    // Also allow filtering by FK fields derived from belongsTo relationships
+    for (const rel of entity.relationships ?? []) {
+      if (rel.type === "belongsTo") {
+        const fk = rel.foreignKey
+          ? rel.foreignKey.replace(/_([a-z])/g, (_: string, l: string) => l.toUpperCase())
+          : rel.entity.charAt(0).toLowerCase() + rel.entity.slice(1) + "Id";
+        allowedFilterFields.add(fk);
+      }
+    }
 
     /** GET /api/contacts — List all */
     app.get<{ Querystring: Record<string, string> }>(
       basePath,
       async (request, reply) => {
-        const { limit, offset, orderBy, direction, ...filters } =
+        const { limit, offset, orderBy, direction, search, ...filters } =
           request.query;
 
         const input: Record<string, unknown> = {};
@@ -567,6 +582,11 @@ export async function registerRESTRoutes(app: FastifyInstance) {
 
         if (limit) input.limit = parseInt(limit, 10);
         if (offset) input.offset = parseInt(offset, 10);
+
+        // Text search across entity's declared searchFields
+        if (search && entity.ui.searchFields.length > 0) {
+          input.search = { term: search, fields: entity.ui.searchFields };
+        }
 
         const result = await dispatch(`${entityLower}.findAll`, input, getCaller(request));
         return sendResult(reply, result);
@@ -702,4 +722,69 @@ export async function registerRESTRoutes(app: FastifyInstance) {
       );
     }
   }
+
+  // ---------------------------------------------------------------
+  // Webhook Management Routes
+  // ---------------------------------------------------------------
+
+  /** GET /api/webhooks — List registered webhooks for this tenant */
+  app.get("/api/webhooks", async (request) => {
+    const caller = getCaller(request);
+    return { success: true, data: listWebhooks(caller.tenantId) };
+  });
+
+  /** POST /api/webhooks — Register a new webhook */
+  app.post<{ Body: { eventType: string; url: string; secret?: string } }>(
+    "/api/webhooks",
+    async (request, reply) => {
+      const caller = getCaller(request);
+      const { eventType, url, secret } = request.body ?? {} as Record<string, unknown>;
+
+      if (!eventType || !url) {
+        return reply.status(400).send({
+          success: false,
+          error: "eventType and url are required",
+        });
+      }
+
+      try {
+        new URL(url as string);
+      } catch {
+        return reply.status(400).send({
+          success: false,
+          error: "url must be a valid URL",
+        });
+      }
+
+      const webhook = registerWebhook({
+        eventType: eventType as string,
+        url: url as string,
+        secret: secret as string | undefined,
+        active: true,
+        tenantId: caller.tenantId,
+      });
+
+      return reply.status(201).send({ success: true, data: webhook });
+    }
+  );
+
+  /** DELETE /api/webhooks/:id — Remove a webhook */
+  app.delete<{ Params: { id: string } }>(
+    "/api/webhooks/:id",
+    async (request, reply) => {
+      const removed = removeWebhook(request.params.id);
+      if (!removed) {
+        return reply.status(404).send({ success: false, error: "Webhook not found" });
+      }
+      return { success: true };
+    }
+  );
+
+  /** GET /api/webhooks/:id/deliveries — Delivery log for a webhook */
+  app.get<{ Params: { id: string } }>(
+    "/api/webhooks/:id/deliveries",
+    async (request) => {
+      return { success: true, data: getDeliveryLog(request.params.id) };
+    }
+  );
 }

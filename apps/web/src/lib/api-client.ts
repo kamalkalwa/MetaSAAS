@@ -138,6 +138,25 @@ export async function deleteEntity(
 }
 
 // ---------------------------------------------------------------
+// Workflow transitions
+// ---------------------------------------------------------------
+
+/**
+ * Fetch valid next states for each workflow field on a record.
+ * Returns a map of field name → allowed next state values.
+ * Empty object when the entity has no workflows.
+ */
+export async function fetchTransitions(
+  pluralName: string,
+  id: string
+): Promise<Record<string, string[]>> {
+  const res: ActionResponse<Record<string, string[]>> = await request(
+    `/api/${pluralName}/${id}/transitions`
+  );
+  return res.data ?? {};
+}
+
+// ---------------------------------------------------------------
 // AI Command (natural language → action dispatch)
 // ---------------------------------------------------------------
 

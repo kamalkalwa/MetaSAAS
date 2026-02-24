@@ -56,16 +56,24 @@ MetaSAAS generates:
 
 The generated code is standard TypeScript. You can review it, edit it, and version-control it exactly like code you wrote by hand.
 
+You can also evolve existing entities from chat: *"Add a dueDate field to Task"* or *"Change Task status options to include blocked."* The AI reads the existing entity file, applies the change, and writes it back.
+
 ### What you get from each entity
 
 No matter which path you take, every entity comes with:
 
 - **REST API** — `GET`, `POST`, `PATCH`, `DELETE` + valid transitions endpoint
-- **Web UI** — list view, detail page, create/edit forms, kanban board, calendar
+- **Web UI** — list view, detail page, create/edit forms, kanban board (drag-and-drop), calendar
+- **Search and filtering** — text search across fields, enum dropdown filters
+- **Bulk operations** — select multiple records, bulk status change, bulk delete
+- **Import / Export** — CSV export from any list, CSV import with field mapping
+- **Related records** — detail pages show linked records from other entities
 - **Database table** — auto-created, auto-migrated when fields change
-- **Workflow engine** — state machine rules enforced on every update
+- **Workflow engine** — state machine rules enforced on every update, smart status controls
 - **AI commands** — "create a high-priority task called Fix login bug"
+- **AI entity evolution** — "Add a dueDate field to Task" modifies entity definitions from chat
 - **Audit log** — every action recorded with who, what, when, and how long
+- **Webhooks** — register URLs to receive HTTP POST on any domain event
 - **Multi-tenancy** — each tenant's data is isolated at the database level
 
 ## Quick Start
@@ -270,6 +278,19 @@ Every directory has a `BLUEPRINT.md` — 24 total. These serve as documentation 
 - **Zod** runtime validation
 - **Tailwind CSS** styling
 - **Vitest** + **Playwright** testing
+
+## Deploy to Production
+
+```bash
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with production values (database password, API keys, CORS origin)
+
+# Build and start all services
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+This starts PostgreSQL, the API server, and the web frontend. The API runs on port 4000 and the web app on port 3000.
 
 ## License
 

@@ -14,7 +14,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import { registerRESTRoutes, closeDatabase } from "@metasaas/platform";
+import { registerRESTRoutes, closeDatabase, initWebhooks } from "@metasaas/platform";
 import { bootstrap } from "./bootstrap.js";
 
 async function main() {
@@ -68,7 +68,10 @@ async function main() {
     timestamp: new Date().toISOString(),
   }));
 
-  // 5. Register all REST routes (generated from Action Bus + Entity Registry)
+  // 5. Initialize webhook system (subscribes to Event Bus)
+  initWebhooks();
+
+  // 6. Register all REST routes (generated from Action Bus + Entity Registry)
   await registerRESTRoutes(app);
 
   // 6. Start server

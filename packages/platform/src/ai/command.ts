@@ -27,7 +27,7 @@ import type { Caller } from "@metasaas/contracts";
 import { getAllActions } from "../core/action-bus/registry.js";
 import { dispatch, type ActionResult } from "../core/action-bus/bus.js";
 import { getAIProvider } from "./gateway.js";
-import { generateEntities, entityToTypeScript, writeEntitiesToDisk } from "./entity-generator.js";
+import { generateEntities, entityToTypeScript, writeEntitiesToDisk, evolveEntity } from "./entity-generator.js";
 import { resolve } from "path";
 
 // ---------------------------------------------------------------------------
@@ -154,6 +154,12 @@ function buildSystemPrompt(
     "  use actionId: 'domain.generate' with input: { description: 'the full domain description' }",
     "- domain.generate is for creating NEW entity types, NOT for creating records of existing entities",
     "- Examples: 'Build me a gym management app', 'I need a hotel booking system', 'Create a library management domain'",
+    "",
+    "SPECIAL ACTION — Entity Modification:",
+    "- If the user wants to MODIFY an existing entity (add/remove/change fields, update workflows, etc.),",
+    "  use actionId: 'domain.modify' with input: { entityName: 'PascalCaseName', modification: 'description of what to change' }",
+    "- domain.modify is for changing existing entity definitions, NOT for creating new ones",
+    "- Examples: 'Add a dueDate field to Task', 'Remove phone from Contact', 'Change Task status options to include blocked'",
   ].join("\n");
 }
 
@@ -324,7 +330,39 @@ export async function interpretCommand(
       };
     }
 
-    // 5b. Dispatch through the Action Bus — same pipeline as REST or UI
+    // 5b. Special handling for entity modification — evolves existing entity definitions.
+    if (mapping.actionId === "domain.modify") {
+      const input = mapping.input as { entityName?: string; modification?: string };
+      if (!input.entityName || !input.modification) {
+        return {
+          success: false,
+          actionId: "domain.modify",
+          interpretation: mapping.explanation,
+          error: "Please specify which entity to modify and what changes to make.",
+        };
+      }
+
+      const monorepoRoot = resolve(process.cwd(), "../..");
+      const domainEntitiesDir = resolve(monorepoRoot, "packages/domain/src/entities");
+
+      const result = await evolveEntity(input.entityName, input.modification, domainEntitiesDir);
+
+      return {
+        success: result.success,
+        actionId: "domain.modify",
+        interpretation: mapping.explanation,
+        data: result.success
+          ? {
+              entityName: result.entityName,
+              changes: result.changes,
+              restartRequired: "Entity file updated on disk. Restart the dev server (pnpm dev) to activate changes.",
+            }
+          : undefined,
+        error: result.error,
+      };
+    }
+
+    // 5c. Dispatch through the Action Bus — same pipeline as REST or UI
     const result = await dispatch(mapping.actionId, mapping.input, caller);
 
     return {

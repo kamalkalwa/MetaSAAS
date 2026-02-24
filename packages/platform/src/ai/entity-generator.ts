@@ -15,7 +15,7 @@
  */
 
 import { getAIProvider } from "./gateway.js";
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 // ---------------------------------------------------------------------------
@@ -542,6 +542,173 @@ export function writeEntitiesToDisk(
       filesCreated,
       indexUpdated: false,
       error: error instanceof Error ? error.message : "Failed to write entity files.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Entity Evolution (modify existing entities via AI)
+// ---------------------------------------------------------------------------
+
+export interface EvolutionResult {
+  success: boolean;
+  entityName: string;
+  changes: string;
+  error?: string;
+}
+
+/**
+ * Builds the system prompt for entity modification.
+ * Teaches the AI how to modify an existing entity definition.
+ */
+function buildEvolutionPrompt(): string {
+  return [
+    "You are a domain modeling expert modifying an existing entity definition.",
+    "The user will describe changes they want to make to an entity.",
+    "You will receive the current entity definition as JSON.",
+    "",
+    "Respond with ONLY valid JSON containing the COMPLETE modified entity in the same format.",
+    "The response must include ALL fields (not just the changed ones) because the entire file will be rewritten.",
+    "",
+    "RULES:",
+    "- Preserve all existing fields unless the user explicitly asks to remove them",
+    "- When adding a field, choose the most appropriate type from: text, email, phone, url, currency, date, datetime, number, percentage, enum, rich_text, boolean",
+    "- When adding an enum field, include the options array",
+    "- When modifying workflow transitions, ensure all states are reachable",
+    "- Update listColumns and searchFields if the changes warrant it",
+    "- Return the COMPLETE entity definition, not just the changes",
+    "- Include a 'changes' field with a human-readable summary of what was modified",
+    "",
+    "Response format:",
+    "{",
+    '  "entity": { ... complete entity definition ... },',
+    '  "changes": "Added dueDate field, updated listColumns to include dueDate"',
+    "}",
+  ].join("\n");
+}
+
+/**
+ * Reads an existing entity definition file from disk and parses it
+ * into a GeneratedEntity shape by evaluating the AI-readable JSON format.
+ */
+export function readEntityFromDisk(
+  entityName: string,
+  domainRoot: string
+): { source: string; path: string } | null {
+  const dirName = entityName.toLowerCase();
+  const entityDir = join(domainRoot, dirName);
+  const entityFile = join(entityDir, `${dirName}.entity.ts`);
+
+  if (!existsSync(entityFile)) return null;
+  return {
+    source: readFileSync(entityFile, "utf-8"),
+    path: entityFile,
+  };
+}
+
+/**
+ * Lists all entity directories in the domain root.
+ */
+export function listEntityNames(domainRoot: string): string[] {
+  if (!existsSync(domainRoot)) return [];
+  return readdirSync(domainRoot, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+}
+
+/**
+ * Evolves an existing entity based on a natural language modification request.
+ * Reads the current entity file, sends it to AI with the change request,
+ * and writes the modified entity back to disk.
+ */
+export async function evolveEntity(
+  entityName: string,
+  modification: string,
+  domainRoot: string
+): Promise<EvolutionResult> {
+  const provider = getAIProvider();
+
+  if (provider.name === "null") {
+    return {
+      success: false,
+      entityName,
+      changes: "",
+      error: "AI is not configured. Set an AI provider API key.",
+    };
+  }
+
+  // Read the existing entity file
+  const existing = readEntityFromDisk(entityName, domainRoot);
+  if (!existing) {
+    return {
+      success: false,
+      entityName,
+      changes: "",
+      error: `Entity "${entityName}" not found in ${domainRoot}. Available: ${listEntityNames(domainRoot).join(", ")}`,
+    };
+  }
+
+  try {
+    const systemPrompt = buildEvolutionPrompt();
+
+    const raw = await provider.complete(
+      [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            `Current entity file for ${entityName}:`,
+            "```typescript",
+            existing.source,
+            "```",
+            "",
+            `Requested change: ${modification}`,
+          ].join("\n"),
+        },
+      ],
+      {
+        responseFormat: "json",
+        temperature: 0.1,
+        maxTokens: 4000,
+      }
+    );
+
+    let parsed: { entity: GeneratedEntity; changes: string };
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return {
+        success: false,
+        entityName,
+        changes: "",
+        error: "Failed to parse AI response for entity modification.",
+      };
+    }
+
+    if (!parsed.entity?.name || !parsed.entity?.fields?.length) {
+      return {
+        success: false,
+        entityName,
+        changes: "",
+        error: "AI returned an invalid entity definition.",
+      };
+    }
+
+    // Write the modified entity back to disk
+    const newSource = entityToTypeScript(parsed.entity) + "\n";
+    writeFileSync(existing.path, newSource, "utf-8");
+
+    return {
+      success: true,
+      entityName: parsed.entity.name,
+      changes: parsed.changes || "Entity modified successfully.",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      entityName,
+      changes: "",
+      error: error instanceof Error ? error.message : "Failed to evolve entity.",
     };
   }
 }

@@ -171,6 +171,10 @@ export function generateCRUDActions(
     description: `Retrieves a list of ${entity.pluralName} with optional filtering and sorting.`,
     inputSchema: z.object({
       where: z.record(z.unknown()).optional(),
+      search: z.object({
+        term: z.string(),
+        fields: z.array(z.string()),
+      }).optional(),
       orderBy: z
         .object({
           field: z.string(),
@@ -189,6 +193,7 @@ export function generateCRUDActions(
     async execute(input, ctx) {
       const typedInput = input as {
         where?: Record<string, unknown>;
+        search?: { term: string; fields: string[] };
         orderBy?: { field: string; direction: "asc" | "desc" };
         limit?: number;
         offset?: number;
@@ -197,11 +202,12 @@ export function generateCRUDActions(
       const [data, total] = await Promise.all([
         ctx.db.findMany(entity.name, {
           where: typedInput.where,
+          search: typedInput.search,
           orderBy: typedInput.orderBy ?? entity.ui.defaultSort,
           limit: typedInput.limit ?? 50,
           offset: typedInput.offset ?? 0,
         }),
-        ctx.db.count(entity.name, typedInput.where),
+        ctx.db.count(entity.name, typedInput.where, typedInput.search),
       ]);
 
       return { data, total };

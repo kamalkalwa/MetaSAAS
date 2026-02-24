@@ -8,6 +8,7 @@ import {
   fetchAllEntityMeta,
   fetchEntityById,
   fetchEntityList,
+  fetchTransitions,
   updateEntity,
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
@@ -50,6 +51,8 @@ export default function EntityEditPage() {
   const [fkFields, setFkFields] = useState<
     { field: FieldDefinition; fkName: string }[]
   >([]);
+  /** Maps workflow field name → allowed next states (from /transitions API) */
+  const [transitions, setTransitions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     async function load() {
@@ -117,6 +120,16 @@ export default function EntityEditPage() {
         setFormData(data);
         setRelOptions(opts);
         setFkFields(syntheticFields);
+
+        // Fetch valid workflow transitions for this record
+        if (meta.workflows?.length) {
+          try {
+            const trans = await fetchTransitions(entitySlug, recordId);
+            setTransitions(trans);
+          } catch {
+            // Non-critical — edit form still works, just shows all options
+          }
+        }
       } catch (err) {
         setErrors({
           _form: err instanceof Error ? err.message : "Failed to load",
@@ -171,9 +184,16 @@ export default function EntityEditPage() {
         setErrors({ _form: result.error ?? "Failed to update" });
       }
     } catch (err) {
-      setErrors({
-        _form: err instanceof Error ? err.message : "An error occurred",
-      });
+      const msg = err instanceof Error ? err.message : "An error occurred";
+      // Make workflow errors human-readable
+      const workflowMatch = msg.match(/Invalid transition.*from "(.+)" to "(.+)"/);
+      if (workflowMatch) {
+        setErrors({
+          _form: `Can't change status from "${workflowMatch[1]}" to "${workflowMatch[2]}". Use one of the available transitions.`,
+        });
+      } else {
+        setErrors({ _form: msg });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -203,21 +223,30 @@ export default function EntityEditPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Declared entity fields */}
-        {entity.fields.map((field) => (
-          <div key={field.name}>
-            <label className="block text-sm font-medium mb-1.5">
-              {columnToLabel(field.name)}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </label>
-            <FieldInput
-              field={field}
-              value={formData[field.name] ?? ""}
-              onChange={(val) =>
-                setFormData((prev) => ({ ...prev, [field.name]: val }))
-              }
-            />
-          </div>
-        ))}
+        {entity.fields.map((field) => {
+          const allowed = transitions[field.name];
+          return (
+            <div key={field.name}>
+              <label className="block text-sm font-medium mb-1.5">
+                {columnToLabel(field.name)}
+                {field.required && <span className="text-destructive ml-1">*</span>}
+              </label>
+              <FieldInput
+                field={field}
+                value={formData[field.name] ?? ""}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, [field.name]: val }))
+                }
+                allowedOptions={allowed}
+              />
+              {allowed && allowed.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  No further transitions available from this state.
+                </p>
+              )}
+            </div>
+          );
+        })}
 
         {/* Relationship fields (belongsTo dropdowns) */}
         {fkFields.map(({ fkName, field }) => (

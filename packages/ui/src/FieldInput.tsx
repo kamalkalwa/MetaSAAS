@@ -33,6 +33,11 @@ interface FieldInputProps {
    * When provided, renders a <select> instead of a text input.
    */
   relationshipOptions?: RelationshipOption[];
+  /**
+   * For workflow-constrained enum fields: restricts the dropdown to only
+   * these values plus the current value. Comes from the /transitions API.
+   */
+  allowedOptions?: string[];
 }
 
 /**
@@ -40,7 +45,7 @@ interface FieldInputProps {
  * Every field type in @metasaas/contracts should have a corresponding case here.
  * When relationshipOptions is provided, renders a dropdown for FK selection.
  */
-export function FieldInput({ field, value, onChange, relationshipOptions }: FieldInputProps) {
+export function FieldInput({ field, value, onChange, relationshipOptions, allowedOptions }: FieldInputProps) {
   // Relationship field — render a dropdown of related records
   if (relationshipOptions) {
     return (
@@ -83,7 +88,13 @@ export function FieldInput({ field, value, onChange, relationshipOptions }: Fiel
         </label>
       );
 
-    case "enum":
+    case "enum": {
+      // When allowedOptions is provided (from the transitions API),
+      // only show the current value + valid next states.
+      const visibleOptions = allowedOptions
+        ? field.options?.filter((opt) => opt === value || allowedOptions.includes(opt))
+        : field.options;
+
       return (
         <select
           className={BASE_INPUT_CLASS}
@@ -91,13 +102,18 @@ export function FieldInput({ field, value, onChange, relationshipOptions }: Fiel
           onChange={(e) => onChange(e.target.value)}
         >
           <option value="">Select {columnToLabel(field.name)}</option>
-          {field.options?.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt.charAt(0).toUpperCase() + opt.slice(1).replace(/_/g, " ")}
-            </option>
-          ))}
+          {visibleOptions?.map((opt) => {
+            const isCurrent = opt === value;
+            const label = opt.charAt(0).toUpperCase() + opt.slice(1).replace(/_/g, " ");
+            return (
+              <option key={opt} value={opt} disabled={isCurrent && !!allowedOptions}>
+                {label}{isCurrent && allowedOptions ? " (current)" : ""}
+              </option>
+            );
+          })}
         </select>
       );
+    }
 
     case "date":
       return (

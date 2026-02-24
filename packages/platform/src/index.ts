@@ -67,6 +67,17 @@ export {
 // Audit Logging
 export { writeAuditLog } from "./core/audit/index.js";
 
+// Webhooks
+export {
+  initWebhooks,
+  registerWebhook,
+  removeWebhook,
+  listWebhooks,
+  getDeliveryLog,
+  type WebhookRegistration,
+  type WebhookDelivery,
+} from "./core/webhooks/index.js";
+
 // Chat Persistence
 export {
   createSession,

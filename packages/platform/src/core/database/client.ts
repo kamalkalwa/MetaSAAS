@@ -9,7 +9,7 @@
  * Actions never import this directly — they receive it via ActionContext.
  */
 
-import { eq, sql, and, type SQL } from "drizzle-orm";
+import { eq, sql, and, or, ilike, type SQL } from "drizzle-orm";
 import type { DatabaseClient } from "@metasaas/contracts";
 import { getDatabase } from "./connection.js";
 import { getTableSchema, toColumnName, fromColumnName } from "./schema-builder.js";
@@ -90,6 +90,22 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
           }
         }
       }
+
+      // ILIKE search across multiple fields (OR-combined)
+      if (options?.search && options.search.term.trim()) {
+        const pattern = `%${options.search.term.trim()}%`;
+        const searchConditions: SQL[] = [];
+        for (const field of options.search.fields) {
+          const colName = toColumnName(field);
+          if (table[colName]) {
+            searchConditions.push(ilike(table[colName], pattern));
+          }
+        }
+        if (searchConditions.length > 0) {
+          conditions.push(or(...searchConditions)!);
+        }
+      }
+
       query = query.where(and(...conditions));
 
       // Apply ORDER BY
@@ -186,7 +202,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
       return rows.length > 0;
     },
 
-    async count(entityName, where) {
+    async count(entityName, where, search) {
       const { db } = getDatabase();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
@@ -207,6 +223,21 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
           }
         }
       }
+
+      if (search && search.term.trim()) {
+        const pattern = `%${search.term.trim()}%`;
+        const searchConditions: SQL[] = [];
+        for (const field of search.fields) {
+          const colName = toColumnName(field);
+          if (table[colName]) {
+            searchConditions.push(ilike(table[colName], pattern));
+          }
+        }
+        if (searchConditions.length > 0) {
+          conditions.push(or(...searchConditions)!);
+        }
+      }
+
       query = query.where(and(...conditions));
 
       const rows = await query;
