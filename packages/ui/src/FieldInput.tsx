@@ -82,7 +82,7 @@ export function FieldInput({ field, value, onChange, relationshipOptions, allowe
             type="checkbox"
             checked={value === "true"}
             onChange={(e) => onChange(String(e.target.checked))}
-            className="rounded border-input"
+            className="rounded border-input accent-primary"
           />
           <span className="text-sm">{field.description}</span>
         </label>

@@ -730,7 +730,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   /** GET /api/webhooks — List registered webhooks for this tenant */
   app.get("/api/webhooks", async (request) => {
     const caller = getCaller(request);
-    return { success: true, data: listWebhooks(caller.tenantId) };
+    return { success: true, data: await listWebhooks(caller.tenantId) };
   });
 
   /** POST /api/webhooks — Register a new webhook */
@@ -756,7 +756,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
         });
       }
 
-      const webhook = registerWebhook({
+      const webhook = await registerWebhook({
         eventType: eventType as string,
         url: url as string,
         secret: secret as string | undefined,
@@ -772,7 +772,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   app.delete<{ Params: { id: string } }>(
     "/api/webhooks/:id",
     async (request, reply) => {
-      const removed = removeWebhook(request.params.id);
+      const removed = await removeWebhook(request.params.id);
       if (!removed) {
         return reply.status(404).send({ success: false, error: "Webhook not found" });
       }
@@ -784,7 +784,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>(
     "/api/webhooks/:id/deliveries",
     async (request) => {
-      return { success: true, data: getDeliveryLog(request.params.id) };
+      return { success: true, data: await getDeliveryLog(request.params.id) };
     }
   );
 }

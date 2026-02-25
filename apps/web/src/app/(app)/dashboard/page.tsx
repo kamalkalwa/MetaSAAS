@@ -133,7 +133,7 @@ export default function DashboardPage() {
             // Trigger Cmd+K to open AI chat
             window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
           }}
-          className="inline-flex items-center px-4 py-2 rounded-md bg-violet-100 text-violet-700 text-sm font-medium hover:bg-violet-200 transition-colors"
+          className="inline-flex items-center px-4 py-2 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/80 transition-colors"
         >
           Open AI Chat
         </button>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                     <div className="flex rounded-full overflow-hidden h-2 mb-3 bg-muted">
                       {Object.entries(wf.states).map(([state, count], idx) => {
                         if (count === 0) return null;
-                        const colors = ["bg-blue-500", "bg-amber-500", "bg-emerald-500", "bg-purple-500", "bg-rose-500"];
+                        const colors = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
                         return (
                           <div
                             key={state}

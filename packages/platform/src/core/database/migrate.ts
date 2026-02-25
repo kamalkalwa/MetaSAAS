@@ -562,6 +562,52 @@ export async function runPlatformMigrations() {
     );
     console.log("[migrate] Created platform table: audit_log");
   }
+
+  // Webhooks — registered HTTP callbacks for domain events
+  const webhooksExists = await tableExists(pgSql, "webhooks");
+  if (!webhooksExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE webhooks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        event_type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        secret TEXT,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE INDEX idx_webhooks_tenant ON webhooks(tenant_id)`
+    );
+    await pgSql.unsafe(
+      `CREATE INDEX idx_webhooks_event ON webhooks(tenant_id, event_type)`
+    );
+    console.log("[migrate] Created platform table: webhooks");
+  }
+
+  // Webhook deliveries — log of HTTP POST attempts and their outcomes
+  const deliveriesExists = await tableExists(pgSql, "webhook_deliveries");
+  if (!deliveriesExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE webhook_deliveries (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+        event_type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        status TEXT NOT NULL,
+        status_code INTEGER,
+        attempt INTEGER NOT NULL DEFAULT 1,
+        error TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE INDEX idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id, created_at DESC)`
+    );
+    console.log("[migrate] Created platform table: webhook_deliveries");
+  }
 }
 
 /**

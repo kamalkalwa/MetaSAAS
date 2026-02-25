@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { FieldInput } from "@/components/field-input";
+import { useToast, FormSkeleton } from "@metasaas/ui";
 import type { EntityDefinition, FieldDefinition } from "@metasaas/contracts";
 import type { RelationshipOption } from "@metasaas/ui";
 
@@ -52,6 +53,7 @@ export default function EntityCreatePage() {
   const [fkFields, setFkFields] = useState<
     { field: FieldDefinition; fkName: string }[]
   >([]);
+  const toast = useToast();
 
   useEffect(() => {
     async function load() {
@@ -176,6 +178,7 @@ export default function EntityCreatePage() {
     try {
       const result = await createEntity(entitySlug, data);
       if (result.success && result.data) {
+        toast(`${entity.name} created`);
         router.push(`/${entitySlug}/${result.data.id}`);
       } else {
         setErrors({ _form: result.error ?? "Failed to create record" });
@@ -190,7 +193,7 @@ export default function EntityCreatePage() {
   }
 
   if (loading || !entity) {
-    return <div className="text-muted-foreground">Loading...</div>;
+    return <FormSkeleton />;
   }
 
   return (

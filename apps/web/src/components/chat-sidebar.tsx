@@ -775,7 +775,7 @@ export function ChatSidebar() {
                         i % 2 === 1 ? (
                           <code
                             key={i}
-                            className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-xs font-mono"
+                            className="bg-foreground/10 rounded px-1 py-0.5 text-xs font-mono"
                           >
                             {segment}
                           </code>
@@ -790,7 +790,7 @@ export function ChatSidebar() {
                         <summary className="text-xs opacity-70 cursor-pointer hover:opacity-100">
                           View result
                         </summary>
-                        <pre className="mt-1.5 max-h-40 overflow-auto rounded-lg bg-black/5 dark:bg-white/5 p-2 text-[11px] font-mono leading-relaxed">
+                        <pre className="mt-1.5 max-h-40 overflow-auto rounded-lg bg-foreground/5 p-2 text-[11px] font-mono leading-relaxed">
                           {JSON.stringify(msg.data, null, 2)}
                         </pre>
                       </details>

@@ -13,6 +13,7 @@ import {
   deleteEntity,
 } from "@/lib/api-client";
 import { formatValue, columnToLabel } from "@/lib/utils";
+import { useToast, ConfirmDialog, DetailSkeleton, CopyButton } from "@metasaas/ui";
 import type { EntityDefinition } from "@metasaas/contracts";
 
 /**
@@ -55,6 +56,8 @@ export default function EntityDetailPage() {
   const [reverseRelated, setReverseRelated] = useState<
     { entity: EntityDefinition; fkField: string; records: Record<string, unknown>[] }[]
   >([]);
+  const toast = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -160,13 +163,13 @@ export default function EntityDetailPage() {
       const result = await updateEntity(entitySlug, recordId, { [field]: newState });
       if (result.success && result.data) {
         setRecord(result.data);
-        // Refresh transitions for the new state
+        toast(`Status changed to ${newState}`);
         try {
           const trans = await fetchTransitions(entitySlug, recordId);
           setTransitions(trans);
         } catch { /* non-critical */ }
       } else {
-        setError(result.error ?? "Transition failed");
+        toast.error(result.error ?? "Transition failed");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Transition failed");
@@ -175,17 +178,18 @@ export default function EntityDetailPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this record?")) return;
+  async function executeDelete() {
+    setConfirmOpen(false);
     try {
       await deleteEntity(entitySlug, recordId);
+      toast("Record deleted");
       router.push(`/${entitySlug}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      toast.error(err instanceof Error ? err.message : "Delete failed");
     }
   }
 
-  if (loading) return <div className="text-muted-foreground">Loading...</div>;
+  if (loading) return <DetailSkeleton />;
   if (error || !entity) {
     return (
       <div className="p-4 rounded-md bg-destructive/10 text-destructive text-sm">
@@ -231,7 +235,7 @@ export default function EntityDetailPage() {
             Edit
           </Link>
           <button
-            onClick={handleDelete}
+            onClick={() => setConfirmOpen(true)}
             className="inline-flex items-center px-4 py-2 rounded-md border border-destructive text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
           >
             Delete
@@ -322,9 +326,17 @@ export default function EntityDetailPage() {
         {/* System fields */}
         <div className="flex px-6 py-4 bg-muted/30">
           <div className="w-48 shrink-0 text-sm font-medium text-muted-foreground">
+            ID
+          </div>
+          <div className="text-sm">
+            <CopyButton value={recordId} className="font-mono text-xs" />
+          </div>
+        </div>
+        <div className="flex px-6 py-4 bg-muted/30">
+          <div className="w-48 shrink-0 text-sm font-medium text-muted-foreground">
             Created
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-foreground">
             {formatValue(record.createdAt)}
           </div>
         </div>
@@ -332,7 +344,7 @@ export default function EntityDetailPage() {
           <div className="w-48 shrink-0 text-sm font-medium text-muted-foreground">
             Updated
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-foreground">
             {formatValue(record.updatedAt)}
           </div>
         </div>
@@ -397,6 +409,16 @@ export default function EntityDetailPage() {
           </div>
         );
       })}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete record"
+        message={`Are you sure you want to delete this ${entity.name.toLowerCase()}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
