@@ -698,6 +698,10 @@ export async function evolveEntity(
     const newSource = entityToTypeScript(parsed.entity) + "\n";
     writeFileSync(existing.path, newSource, "utf-8");
 
+    // Regenerate BLUEPRINT.md to stay in sync with the entity definition
+    const blueprintPath = join(domainRoot, parsed.entity.name.toLowerCase(), "BLUEPRINT.md");
+    writeFileSync(blueprintPath, entityToBlueprint(parsed.entity), "utf-8");
+
     return {
       success: true,
       entityName: parsed.entity.name,

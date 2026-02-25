@@ -185,8 +185,8 @@ export function CommandBar() {
 
                 {/* Success */}
                 {result.success && (
-                  <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
+                  <div className="rounded-lg border border-success/20 bg-success/5 p-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-success">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
@@ -213,8 +213,8 @@ export function CommandBar() {
 
                 {/* Error */}
                 {!result.success && result.error && (
-                  <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-destructive">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"

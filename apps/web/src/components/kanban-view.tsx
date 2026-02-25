@@ -41,13 +41,14 @@ interface KanbanViewProps {
   onCardMoved?: () => void;
 }
 
+/** Column header styles derived from chart tokens — theme-agnostic via opacity */
 const COLUMN_COLORS = [
-  "bg-blue-50 border-blue-200 text-blue-700",
-  "bg-amber-50 border-amber-200 text-amber-700",
-  "bg-emerald-50 border-emerald-200 text-emerald-700",
-  "bg-purple-50 border-purple-200 text-purple-700",
-  "bg-rose-50 border-rose-200 text-rose-700",
-  "bg-cyan-50 border-cyan-200 text-cyan-700",
+  "bg-chart-1/10 border-chart-1/30 text-chart-1",
+  "bg-chart-2/10 border-chart-2/30 text-chart-2",
+  "bg-chart-3/10 border-chart-3/30 text-chart-3",
+  "bg-chart-4/10 border-chart-4/30 text-chart-4",
+  "bg-chart-5/10 border-chart-5/30 text-chart-5",
+  "bg-chart-6/10 border-chart-6/30 text-chart-6",
 ];
 
 /** A single draggable card in the kanban board */
@@ -113,8 +114,8 @@ function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: colKey });
 
   let dropHighlight = "";
-  if (isOver && isValidTarget === true) dropHighlight = "ring-2 ring-green-400 bg-green-50/30";
-  else if (isOver && isValidTarget === false) dropHighlight = "ring-2 ring-red-400 bg-red-50/30";
+  if (isOver && isValidTarget === true) dropHighlight = "ring-2 ring-success bg-success/10";
+  else if (isOver && isValidTarget === false) dropHighlight = "ring-2 ring-destructive bg-destructive/10";
 
   return (
     <div ref={setNodeRef} className="flex-shrink-0 w-72">
@@ -267,8 +268,8 @@ export function KanbanView({
         <div
           className={`mb-4 px-4 py-2 rounded-md text-sm ${
             toast.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+              ? "bg-success/10 text-success border border-success/20"
+              : "bg-destructive/10 text-destructive border border-destructive/20"
           }`}
         >
           {toast.message}

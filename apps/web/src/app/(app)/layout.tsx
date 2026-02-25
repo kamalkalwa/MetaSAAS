@@ -177,7 +177,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border space-y-2">
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          {/* Dark mode toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const html = document.documentElement;
+              const wasDark = html.classList.contains("dark");
+              html.classList.remove("dark", "light");
+              if (wasDark) {
+                html.classList.add("light");
+                localStorage.setItem("metasaas:theme", "light");
+              } else {
+                html.classList.add("dark");
+                localStorage.setItem("metasaas:theme", "dark");
+              }
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+            </svg>
+            Toggle theme
+          </button>
+
           {authEnabled && user && (
             <div className="flex items-center justify-between">
               <span

@@ -14,6 +14,7 @@
 import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { setTokenProvider } from "@/lib/api-client";
+import { ToastProvider } from "@metasaas/ui";
 
 /**
  * Bridges the auth context to the API client.
@@ -32,7 +33,9 @@ function TokenBridge({ children }: { children: ReactNode }) {
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
-      <TokenBridge>{children}</TokenBridge>
+      <TokenBridge>
+        <ToastProvider>{children}</ToastProvider>
+      </TokenBridge>
     </AuthProvider>
   );
 }
