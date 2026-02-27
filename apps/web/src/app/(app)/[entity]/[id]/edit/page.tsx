@@ -10,6 +10,7 @@ import {
   fetchEntityList,
   fetchTransitions,
   updateEntity,
+  uploadFile,
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { FieldInput } from "@/components/field-input";
@@ -196,6 +197,7 @@ export default function EntityEditPage() {
         });
       } else {
         setErrors({ _form: msg });
+        toast.error(msg);
       }
     } finally {
       setSubmitting(false);
@@ -241,6 +243,11 @@ export default function EntityEditPage() {
                   setFormData((prev) => ({ ...prev, [field.name]: val }))
                 }
                 allowedOptions={allowed}
+                onFileUpload={field.type === "file" ? async (file) => {
+                  const key = `${entitySlug}/${field.name}/${crypto.randomUUID()}-${file.name}`;
+                  const res = await uploadFile(key, file);
+                  return res.key;
+                } : undefined}
               />
               {allowed && allowed.length === 0 && (
                 <p className="text-xs text-muted-foreground mt-1">

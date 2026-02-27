@@ -15,7 +15,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import type { Caller, EntityDefinition } from "@metasaas/contracts";
+import type { Caller } from "@metasaas/contracts";
 import { dispatch, type ActionResult } from "../../core/action-bus/bus.js";
 import { getAllActions } from "../../core/action-bus/registry.js";
 import {
@@ -31,6 +31,20 @@ import {
   listWebhooks,
   getDeliveryLog,
 } from "../../core/webhooks/index.js";
+import {
+  getEnabledFeatures,
+  getLicenseInfo,
+} from "../../core/licensing/index.js";
+import { sendEmail } from "../../core/email/index.js";
+import { uploadFile, getFileUrl, deleteFile } from "../../core/storage/index.js";
+import { captureException } from "../../core/observability/index.js";
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../../core/notifications/index.js";
+import { queryAuditLog } from "../../core/audit/query.js";
+import { installEntity } from "../../ai/entity-installer.js";
 import {
   createSession,
   listSessions,
@@ -144,6 +158,52 @@ export async function registerRESTRoutes(app: FastifyInstance) {
       affectsEntities: a.affectsEntities,
       examples: a.examples,
     }));
+  });
+
+  /**
+   * Returns enabled features and license info.
+   * The frontend uses this to show/hide gated UI (kanban, calendar, AI chat, etc.)
+   */
+  app.get("/api/meta/features", async () => {
+    return {
+      features: getEnabledFeatures(),
+      license: getLicenseInfo(),
+    };
+  });
+
+  // ---------------------------------------------------------------
+  // Entity Installer — hot-install entities at runtime
+  // ---------------------------------------------------------------
+
+  /**
+   * POST /api/entities/install — Install a new entity at runtime.
+   * Accepts an EntityDefinition JSON, registers it in all subsystems,
+   * creates the database table, and makes CRUD actions available immediately.
+   */
+  app.post("/api/entities/install", async (request, reply) => {
+    const body = request.body as Record<string, unknown> | undefined;
+
+    if (!body || !body.name || !body.fields) {
+      return reply.status(400).send({
+        success: false,
+        error: "Request body must be a valid EntityDefinition with at least 'name' and 'fields'.",
+      });
+    }
+
+    try {
+      const result = await installEntity(body as any);
+      if (!result.success) {
+        return reply.status(422).send({
+          success: false,
+          error: result.error,
+          warnings: result.warnings,
+        });
+      }
+      return reply.status(201).send({ success: true, data: result });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return reply.status(500).send({ success: false, error: message });
+    }
   });
 
   // ---------------------------------------------------------------
@@ -297,7 +357,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   );
 
   // ---------------------------------------------------------------
-  // Chat persistence — session and message CRUD
+  // Chat persistence — session and message CRUD (requires AI_CHAT)
   // ---------------------------------------------------------------
 
   /** List chat sessions for the authenticated user */
@@ -724,11 +784,120 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   }
 
   // ---------------------------------------------------------------
+  // Webhook Management Routes (requires WEBHOOKS feature)
+  // ---------------------------------------------------------------
+
+  // ---------------------------------------------------------------
+  // File Storage Routes
+  // ---------------------------------------------------------------
+
+  /** POST /api/files/upload — Upload a file (multipart or base64 JSON) */
+  app.post("/api/files/upload", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      key?: string;
+      content?: string;
+      contentType?: string;
+    };
+
+    if (!body.key || !body.content || !body.contentType) {
+      return reply.status(400).send({
+        success: false,
+        error: "key, content (base64), and contentType are required",
+      });
+    }
+
+    // Sanitize key — prevent path traversal
+    const sanitizedKey = body.key.replace(/\.\./g, "").replace(/^\//, "");
+    if (!sanitizedKey) {
+      return reply.status(400).send({
+        success: false,
+        error: "Invalid file key",
+      });
+    }
+
+    const buffer = Buffer.from(body.content, "base64");
+    const result = await uploadFile({
+      key: sanitizedKey,
+      body: buffer,
+      contentType: body.contentType,
+    });
+
+    if (!result.success) {
+      return reply.status(500).send({ success: false, error: result.error });
+    }
+
+    return reply.status(201).send({ success: true, data: result });
+  });
+
+  /** GET /api/files/:key — Get file URL (redirect or return URL) */
+  app.get<{ Params: { "*": string } }>(
+    "/api/files/*",
+    async (request, reply) => {
+      const key = request.params["*"];
+      if (!key) {
+        return reply.status(400).send({ success: false, error: "File key is required" });
+      }
+
+      const url = await getFileUrl(key);
+      return { success: true, data: { key, url } };
+    }
+  );
+
+  /** DELETE /api/files/:key — Delete a file */
+  app.delete<{ Params: { "*": string } }>(
+    "/api/files/*",
+    async (request, reply) => {
+      const key = request.params["*"];
+      if (!key) {
+        return reply.status(400).send({ success: false, error: "File key is required" });
+      }
+
+      const deleted = await deleteFile(key);
+      if (!deleted) {
+        return reply.status(404).send({ success: false, error: "File not found" });
+      }
+
+      return { success: true };
+    }
+  );
+
+  // ---------------------------------------------------------------
+  // Email — test endpoint (admin only, for verifying email config)
+  // ---------------------------------------------------------------
+
+  /** POST /api/email/send — Send a test email */
+  app.post<{ Body: { to: string; subject: string; html: string } }>(
+    "/api/email/send",
+    async (request, reply) => {
+      const body = (request.body ?? {}) as {
+        to?: string;
+        subject?: string;
+        html?: string;
+      };
+
+      if (!body.to || !body.subject || !body.html) {
+        return reply.status(400).send({
+          success: false,
+          error: "to, subject, and html are required",
+        });
+      }
+
+      const result = await sendEmail({
+        to: body.to,
+        subject: body.subject,
+        html: body.html,
+      });
+
+      return { success: result.success, data: result };
+    }
+  );
+
+  // ---------------------------------------------------------------
   // Webhook Management Routes
   // ---------------------------------------------------------------
 
   /** GET /api/webhooks — List registered webhooks for this tenant */
-  app.get("/api/webhooks", async (request) => {
+  app.get("/api/webhooks", async (request, reply) => {
     const caller = getCaller(request);
     return { success: true, data: await listWebhooks(caller.tenantId) };
   });
@@ -787,4 +956,118 @@ export async function registerRESTRoutes(app: FastifyInstance) {
       return { success: true, data: await getDeliveryLog(request.params.id) };
     }
   );
+
+  // ---------------------------------------------------------------
+  // Notifications — in-app notification center
+  // ---------------------------------------------------------------
+
+  app.get("/api/notifications", async (request) => {
+    const caller = getCaller(request);
+    const query = request.query as {
+      limit?: string;
+      offset?: string;
+      unreadOnly?: string;
+    };
+
+    const result = await getNotifications(caller.tenantId, caller.userId, {
+      limit: query.limit ? parseInt(query.limit, 10) : undefined,
+      offset: query.offset ? parseInt(query.offset, 10) : undefined,
+      unreadOnly: query.unreadOnly === "true",
+    });
+
+    return { success: true, data: result };
+  });
+
+  app.patch<{ Params: { id: string } }>(
+    "/api/notifications/:id/read",
+    async (request) => {
+      const caller = getCaller(request);
+      const marked = await markNotificationRead(request.params.id, caller.tenantId);
+      return { success: true, data: { marked } };
+    }
+  );
+
+  app.patch("/api/notifications/read-all", async (request) => {
+    const caller = getCaller(request);
+    const count = await markAllNotificationsRead(caller.tenantId, caller.userId);
+    return { success: true, data: { count } };
+  });
+
+  // ---------------------------------------------------------------
+  // Audit Log — activity feed
+  // ---------------------------------------------------------------
+
+  app.get("/api/audit-log", async (request) => {
+    const caller = getCaller(request);
+    const query = request.query as {
+      entity?: string;
+      userId?: string;
+      actionId?: string;
+      success?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: string;
+      offset?: string;
+    };
+
+    const result = await queryAuditLog({
+      tenantId: caller.tenantId,
+      entity: query.entity || undefined,
+      userId: query.userId || undefined,
+      actionId: query.actionId || undefined,
+      success: query.success === "true" ? true : query.success === "false" ? false : undefined,
+      dateFrom: query.dateFrom || undefined,
+      dateTo: query.dateTo || undefined,
+      limit: query.limit ? parseInt(query.limit, 10) : undefined,
+      offset: query.offset ? parseInt(query.offset, 10) : undefined,
+    });
+
+    return { success: true, data: result };
+  });
+
+  // ---------------------------------------------------------------
+  // Observability — frontend error capture (public, no auth)
+  // ---------------------------------------------------------------
+
+  app.post("/api/observability/capture", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      message?: string;
+      stack?: string;
+      componentStack?: string;
+      url?: string;
+    };
+
+    if (!body.message) {
+      return reply.status(400).send({ success: false, error: "message is required" });
+    }
+
+    const error = new Error(body.message);
+    if (body.stack) error.stack = body.stack;
+
+    captureException(error, {
+      source: "frontend",
+      componentStack: body.componentStack,
+      pageUrl: body.url,
+    });
+
+    return { success: true };
+  });
+
+  // ---------------------------------------------------------------
+  // Global Fastify error handler — captures unhandled route errors
+  // ---------------------------------------------------------------
+
+  app.setErrorHandler(async (error, request, reply) => {
+    captureException(error instanceof Error ? error : new Error(String(error)), {
+      url: request.url,
+      method: request.method,
+      userId: request.caller?.userId,
+      tenantId: request.caller?.tenantId,
+    });
+
+    reply.status(500).send({
+      success: false,
+      error: "An unexpected error occurred",
+    });
+  });
 }

@@ -24,6 +24,8 @@ const PUBLIC_ROUTES = new Set([
   "/api/health",
   "/api/meta/entities",
   "/api/auth/config",
+  "/api/observability/capture",
+  "/api/billing/webhook",
 ]);
 
 /**
@@ -80,6 +82,11 @@ export async function authMiddleware(
 
   // Skip auth for entity metadata by path prefix (supports /api/meta/entities/:name)
   if (path.startsWith("/api/meta/")) {
+    return;
+  }
+
+  // Skip auth for plan listing (public pricing display) — GET only
+  if (path.startsWith("/api/billing/plans") && request.method === "GET") {
     return;
   }
 

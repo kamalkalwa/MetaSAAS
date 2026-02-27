@@ -1,6 +1,6 @@
 {
   "name": "@metasaas/domain",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Domain layer — your business entities, actions, and workflows",
   "main": "./src/index.ts",

@@ -25,6 +25,7 @@ export const FIELD_TYPES = [
   "enum",
   "rich_text",
   "boolean",
+  "file",
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -64,6 +65,9 @@ export function zodSchemaForFieldType(
       break;
     case "boolean":
       schema = z.boolean();
+      break;
+    case "file":
+      schema = z.string();
       break;
     case "enum":
       if (options?.enumValues && options.enumValues.length > 0) {

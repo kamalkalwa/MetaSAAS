@@ -76,11 +76,40 @@ async function request<T>(
       }
     }
 
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `API error: ${res.status}`);
+    const body = await res.json().catch(() => null);
+    const message = body?.error ?? body?.message ?? `Request failed (HTTP ${res.status})`;
+    throw new Error(message);
   }
 
   return res.json();
+}
+
+// ---------------------------------------------------------------
+// File Storage
+// ---------------------------------------------------------------
+
+/** Upload a file to storage. Returns the stored file key. */
+export async function uploadFile(
+  key: string,
+  file: File
+): Promise<{ key: string; url: string }> {
+  const buffer = await file.arrayBuffer();
+  const base64 = btoa(
+    new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
+  );
+
+  const res: ActionResponse<{ key: string; url: string }> = await request(
+    "/api/files/upload",
+    {
+      method: "POST",
+      body: JSON.stringify({ key, content: base64, contentType: file.type }),
+    }
+  );
+
+  if (!res.success || !res.data) {
+    throw new Error(res.error ?? "File upload failed");
+  }
+  return res.data;
 }
 
 // ---------------------------------------------------------------
@@ -414,4 +443,189 @@ export async function fetchEntityMeta(
   pluralName: string
 ): Promise<import("@metasaas/contracts").EntityDefinition> {
   return request(`/api/meta/entities/${pluralName}`);
+}
+
+// ---------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------
+
+export interface NotificationData {
+  id: string;
+  tenantId: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: "info" | "success" | "warning" | "error";
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  data: NotificationData[];
+  total: number;
+  unread: number;
+}
+
+/** Fetch notifications for the current user */
+export async function fetchNotifications(params?: {
+  limit?: number;
+  offset?: number;
+  unreadOnly?: boolean;
+}): Promise<NotificationListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  if (params?.unreadOnly) searchParams.set("unreadOnly", "true");
+  const qs = searchParams.toString();
+  const res = await request<{ data: NotificationListResponse }>(`/api/notifications${qs ? `?${qs}` : ""}`);
+  return res.data;
+}
+
+/** Mark a single notification as read */
+export async function markNotificationReadApi(id: string): Promise<void> {
+  await request(`/api/notifications/${id}/read`, { method: "PATCH" });
+}
+
+/** Mark all notifications as read */
+export async function markAllNotificationsReadApi(): Promise<void> {
+  await request("/api/notifications/read-all", { method: "PATCH" });
+}
+
+// ---------------------------------------------------------------
+// Audit Log / Activity Feed
+// ---------------------------------------------------------------
+
+export interface AuditLogEntry {
+  id: string;
+  tenantId: string;
+  userId: string;
+  actionId: string;
+  success: boolean;
+  durationMs: number;
+  input: unknown;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogResponse {
+  data: AuditLogEntry[];
+  total: number;
+}
+
+/** Fetch audit log entries with optional filters */
+export async function fetchAuditLog(params?: {
+  entity?: string;
+  userId?: string;
+  success?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AuditLogResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.entity) searchParams.set("entity", params.entity);
+  if (params?.userId) searchParams.set("userId", params.userId);
+  if (params?.success) searchParams.set("success", params.success);
+  if (params?.dateFrom) searchParams.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) searchParams.set("dateTo", params.dateTo);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  const res = await request<{ data: AuditLogResponse }>(`/api/audit-log${qs ? `?${qs}` : ""}`);
+  return res.data;
+}
+
+// ---------------------------------------------------------------
+// Billing
+// ---------------------------------------------------------------
+
+export interface SubscriptionData {
+  id: string;
+  tenantId: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid";
+  planId: string;
+  planName: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceData {
+  id: string;
+  tenantId: string;
+  stripeInvoiceId: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  status: string;
+  invoiceUrl: string | null;
+  createdAt: string;
+}
+
+export interface PlanData {
+  id: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+  interval: "month" | "year" | "one_time";
+  stripePriceId: string | null;
+  features: string[];
+  sortOrder: number;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+/** Fetch all active plans (public, no auth required) */
+export async function fetchPlans(): Promise<PlanData[]> {
+  const res: ActionResponse<PlanData[]> = await request("/api/billing/plans");
+  return res.data ?? [];
+}
+
+/** Create a Stripe Checkout session for a specific plan */
+export async function createCheckout(params: {
+  planId: string;
+  successUrl?: string;
+  cancelUrl?: string;
+}): Promise<{ url: string; sessionId: string }> {
+  const res: ActionResponse<{ url: string; sessionId: string }> = await request(
+    "/api/billing/checkout",
+    { method: "POST", body: JSON.stringify(params) }
+  );
+  return res.data!;
+}
+
+/** Get the current subscription for the tenant */
+export async function fetchSubscription(): Promise<SubscriptionData | null> {
+  const res: ActionResponse<SubscriptionData | null> = await request("/api/billing/subscription");
+  return res.data ?? null;
+}
+
+/** Cancel subscription at period end */
+export async function cancelSubscription(): Promise<boolean> {
+  const res: ActionResponse<{ canceled: boolean }> = await request(
+    "/api/billing/cancel",
+    { method: "POST" }
+  );
+  return res.data?.canceled ?? false;
+}
+
+/** Create a Stripe Customer Portal session */
+export async function createPortalSession(): Promise<{ url: string }> {
+  const res: ActionResponse<{ url: string }> = await request(
+    "/api/billing/portal",
+    { method: "POST" }
+  );
+  return res.data!;
+}
+
+/** Fetch invoice history */
+export async function fetchInvoices(): Promise<InvoiceData[]> {
+  const res: ActionResponse<InvoiceData[]> = await request("/api/billing/invoices");
+  return res.data ?? [];
 }

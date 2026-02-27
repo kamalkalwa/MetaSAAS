@@ -247,8 +247,8 @@ describe("zodSchemaForFieldType", () => {
   // ---------------------------------------------------------------------------
 
   describe("FIELD_TYPES constant", () => {
-    it("contains all 12 expected field types", () => {
-      expect(FIELD_TYPES).toHaveLength(12);
+    it("contains all 13 expected field types", () => {
+      expect(FIELD_TYPES).toHaveLength(13);
       expect(FIELD_TYPES).toContain("text");
       expect(FIELD_TYPES).toContain("email");
       expect(FIELD_TYPES).toContain("phone");
@@ -261,6 +261,7 @@ describe("zodSchemaForFieldType", () => {
       expect(FIELD_TYPES).toContain("enum");
       expect(FIELD_TYPES).toContain("rich_text");
       expect(FIELD_TYPES).toContain("boolean");
+      expect(FIELD_TYPES).toContain("file");
     });
   });
 

@@ -35,6 +35,7 @@ export function DataTable({
                 type="checkbox"
                 checked={rows.length > 0 && selected.size === rows.length}
                 onChange={onToggleSelectAll}
+                aria-label="Select all rows"
                 className="rounded border-input accent-primary"
               />
             </th>
@@ -55,7 +56,7 @@ export function DataTable({
             return (
               <tr
                 key={rowId}
-                className={`hover:bg-muted/30 cursor-pointer transition-colors ${
+                className={`hover:bg-muted/50 cursor-pointer transition-colors ${
                   selected.has(rowId) ? "bg-primary/5" : ""
                 }`}
                 onClick={() => onRowClick(rowId)}
@@ -65,6 +66,7 @@ export function DataTable({
                     type="checkbox"
                     checked={selected.has(rowId)}
                     onChange={() => onToggleSelect(rowId)}
+                    aria-label="Select row"
                     className="rounded border-input accent-primary"
                   />
                 </td>

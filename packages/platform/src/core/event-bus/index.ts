@@ -18,6 +18,7 @@
  */
 
 import type { DomainEvent, EventSubscriber } from "@metasaas/contracts";
+import { captureException } from "../observability/index.js";
 
 /** All registered subscribers, keyed by event type */
 const subscribers = new Map<string, EventSubscriber[]>();
@@ -90,6 +91,13 @@ export async function publish(event: DomainEvent): Promise<void> {
         `[event-bus] Subscriber "${handlers[i].name}" failed for event "${enrichedEvent.type}":`,
         result.reason
       );
+      // Capture subscriber failure in observability
+      if (result.reason instanceof Error) {
+        captureException(result.reason, {
+          subscriber: handlers[i].name,
+          eventType: enrichedEvent.type,
+        });
+      }
     }
   }
 }

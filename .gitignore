@@ -41,5 +41,8 @@ blob-report/
 # Private strategy documents (not part of the template)
 PRODUCT-OPPORTUNITIES.md
 
+# License key generation tool (contains private signing key)
+tools/license-keygen/
+
 # Updates/posts artifacts
 updates/

@@ -1,10 +1,10 @@
 {
   "name": "@metasaas/web",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Next.js frontend — renders entities dynamically from definitions",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "clean": "rm -rf .next",

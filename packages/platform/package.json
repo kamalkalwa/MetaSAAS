@@ -1,6 +1,6 @@
 {
   "name": "@metasaas/platform",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Platform engine — Action Bus, database, adapters. Never modified for business logic.",
   "main": "./src/index.ts",
@@ -20,6 +20,14 @@
     "fastify": "^5",
     "postgres": "^3.4",
     "zod": "^3.24"
+  },
+  "peerDependencies": {
+    "@sentry/node": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@sentry/node": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^22",

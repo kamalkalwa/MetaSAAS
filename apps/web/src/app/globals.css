@@ -250,3 +250,16 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted-foreground);
 }
+
+/* ── Micro-interactions ───────────────────────────────────────── */
+
+/* Subtle press feedback on primary action buttons */
+.bg-primary:active {
+  transform: scale(0.98);
+}
+
+/* Remove tap highlight on mobile */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}

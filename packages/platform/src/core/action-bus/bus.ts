@@ -24,6 +24,7 @@ import { createLogger, logActionExecution } from "./middleware/logging.js";
 import { createDatabaseClient } from "../database/client.js";
 import { publish } from "../event-bus/index.js";
 import { writeAuditLog } from "../audit/index.js";
+import { captureException } from "../observability/index.js";
 
 /**
  * Error categories for structured error handling.
@@ -191,6 +192,15 @@ export async function dispatch<T = unknown>(
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     });
+
+    // Capture unexpected errors in observability provider (Sentry, etc.)
+    if (error instanceof Error) {
+      captureException(error, {
+        actionId,
+        userId: caller.userId,
+        tenantId: caller.tenantId,
+      });
+    }
 
     return {
       success: false,

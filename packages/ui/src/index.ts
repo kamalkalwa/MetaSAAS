@@ -6,7 +6,7 @@
  */
 
 // Utilities
-export { cn, columnToLabel, formatValue } from "./utils";
+export { cn, columnToLabel, formatValue, timeAgo } from "./utils";
 
 // Components
 export { FieldInput, type RelationshipOption } from "./FieldInput";

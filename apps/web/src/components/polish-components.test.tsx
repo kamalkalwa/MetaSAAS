@@ -33,7 +33,7 @@ function ToastTestHarness() {
 }
 
 describe("Toast", () => {
-  it("renders a success toast when triggered", () => {
+  it("renders a success toast when triggered", async () => {
     render(
       <ToastProvider>
         <ToastTestHarness />
@@ -41,10 +41,10 @@ describe("Toast", () => {
     );
 
     fireEvent.click(screen.getByText("Show Toast"));
-    expect(screen.getByText("Success message")).toBeDefined();
+    expect(await screen.findByText("Success message")).toBeDefined();
   });
 
-  it("renders an error toast when triggered", () => {
+  it("renders an error toast when triggered", async () => {
     render(
       <ToastProvider>
         <ToastTestHarness />
@@ -52,10 +52,10 @@ describe("Toast", () => {
     );
 
     fireEvent.click(screen.getByText("Show Error"));
-    expect(screen.getByText("Error message")).toBeDefined();
+    expect(await screen.findByText("Error message")).toBeDefined();
   });
 
-  it("renders an info toast when triggered", () => {
+  it("renders an info toast when triggered", async () => {
     render(
       <ToastProvider>
         <ToastTestHarness />
@@ -63,7 +63,7 @@ describe("Toast", () => {
     );
 
     fireEvent.click(screen.getByText("Show Info"));
-    expect(screen.getByText("Info message")).toBeDefined();
+    expect(await screen.findByText("Info message")).toBeDefined();
   });
 
   it("throws if useToast is used outside provider", () => {

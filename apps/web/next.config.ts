@@ -20,9 +20,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 loadDotenv({ path: resolve(__dirname, "../../.env") });
 
 const nextConfig: NextConfig = {
-  /** Standalone output for Docker deployments */
-  output: "standalone",
-
   /** Transpile workspace packages so Next.js can process them */
   transpilePackages: ["@metasaas/contracts", "@metasaas/ui"],
 

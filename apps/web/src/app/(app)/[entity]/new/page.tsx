@@ -8,6 +8,7 @@ import {
   fetchAllEntityMeta,
   fetchEntityList,
   createEntity,
+  uploadFile,
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { FieldInput } from "@/components/field-input";
@@ -228,6 +229,11 @@ export default function EntityCreatePage() {
               onChange={(val) =>
                 setFormData((prev) => ({ ...prev, [field.name]: val }))
               }
+              onFileUpload={field.type === "file" ? async (file) => {
+                const key = `${entitySlug}/${field.name}/${crypto.randomUUID()}-${file.name}`;
+                const res = await uploadFile(key, file);
+                return res.key;
+              } : undefined}
             />
             {errors[field.name] && (
               <p className="text-xs text-destructive mt-1">
