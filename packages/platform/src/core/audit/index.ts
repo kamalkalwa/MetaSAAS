@@ -13,6 +13,9 @@
 
 import { getDatabase } from "../database/connection.js";
 
+// Re-export query functionality
+export { queryAuditLog, type AuditLogQuery, type AuditLogEntry, type AuditLogResult } from "./query.js";
+
 /**
  * Records an action execution in the persistent audit log.
  * Called by the Action Bus after every dispatch (success or failure).

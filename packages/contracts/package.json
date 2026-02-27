@@ -1,6 +1,6 @@
 {
   "name": "@metasaas/contracts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Shared TypeScript interfaces — the boundary between platform and domain",
   "main": "./src/index.ts",

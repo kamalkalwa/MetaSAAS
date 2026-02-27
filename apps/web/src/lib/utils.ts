@@ -6,4 +6,4 @@
  * used throughout the web app.
  */
 
-export { cn, columnToLabel, formatValue } from "@metasaas/ui";
+export { cn, columnToLabel, formatValue, timeAgo } from "@metasaas/ui";

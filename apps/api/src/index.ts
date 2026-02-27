@@ -14,7 +14,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import { registerRESTRoutes, closeDatabase, initWebhooks } from "@metasaas/platform";
+import { registerRESTRoutes, registerPluginRoutes, closeDatabase, initWebhooks, flushObservability, captureException } from "@metasaas/platform";
 import { bootstrap } from "./bootstrap.js";
 
 async function main() {
@@ -74,7 +74,10 @@ async function main() {
   // 6. Register all REST routes (generated from Action Bus + Entity Registry)
   await registerRESTRoutes(app);
 
-  // 6. Start server
+  // 7. Register plugin routes (if any plugins added Fastify routes)
+  await registerPluginRoutes(app);
+
+  // 8. Start server
   await app.listen({
     port: config.api.port,
     host: config.api.host,
@@ -88,6 +91,7 @@ async function main() {
   const shutdown = async () => {
     console.log("\n[shutdown] Closing...");
     await app.close();
+    await flushObservability(2000);
     await closeDatabase();
     process.exit(0);
   };
@@ -96,7 +100,9 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("Fatal error:", err);
+  captureException(err instanceof Error ? err : new Error(String(err)));
+  await flushObservability(2000).catch(() => {});
   process.exit(1);
 });

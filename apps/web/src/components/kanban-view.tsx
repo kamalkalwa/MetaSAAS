@@ -28,6 +28,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { formatValue, columnToLabel } from "@/lib/utils";
 import { updateEntity } from "@/lib/api-client";
+import { useToast } from "@metasaas/ui";
 import type { EntityDefinition } from "@metasaas/contracts";
 
 interface KanbanViewProps {
@@ -79,7 +80,7 @@ function KanbanCard({
       {...listeners}
       {...attributes}
       onClick={() => router.push(`/${entitySlug}/${id}`)}
-      className="bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow touch-none"
+      className="bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 touch-none"
     >
       <div className="font-medium text-sm mb-1 truncate">
         {formatValue(row[listColumns[0]])}
@@ -157,8 +158,8 @@ export function KanbanView({
   onCardMoved,
 }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [localRows, setLocalRows] = useState(rows);
+  const toast = useToast();
 
   // Keep local rows in sync with prop changes
   if (rows !== localRows && !activeId) {
@@ -201,7 +202,6 @@ export function KanbanView({
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
-    setToast(null);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -224,10 +224,7 @@ export function KanbanView({
       if (allowed && !allowed.includes(targetColumn)) {
         const fromLabel = columnToLabel(currentColumn);
         const toLabel = columnToLabel(targetColumn);
-        setToast({
-          message: `Can't move from "${fromLabel}" to "${toLabel}". Try: ${allowed.map(columnToLabel).join(", ") || "no transitions available"}.`,
-          type: "error",
-        });
+        toast.error(`Can't move from "${fromLabel}" to "${toLabel}". Try: ${allowed.map(columnToLabel).join(", ") || "no transitions available"}.`);
         return;
       }
     }
@@ -240,48 +237,26 @@ export function KanbanView({
     try {
       const result = await updateEntity(entitySlug, recordId, { [groupBy]: targetColumn });
       if (result.success) {
-        setToast({ message: `Moved to ${columnToLabel(targetColumn)}`, type: "success" });
+        toast(`Moved to ${columnToLabel(targetColumn)}`);
         onCardMoved?.();
       } else {
         // Rollback
         setLocalRows((prev) =>
           prev.map((r) => (r.id === recordId ? { ...r, [groupBy]: currentColumn } : r))
         );
-        setToast({ message: result.error ?? "Move failed", type: "error" });
+        toast.error(result.error ?? "Move failed");
       }
     } catch (err) {
       // Rollback
       setLocalRows((prev) =>
         prev.map((r) => (r.id === recordId ? { ...r, [groupBy]: currentColumn } : r))
       );
-      setToast({
-        message: err instanceof Error ? err.message : "Move failed",
-        type: "error",
-      });
+      toast.error(err instanceof Error ? err.message : "Move failed");
     }
   }
 
   return (
     <div>
-      {/* Toast notification */}
-      {toast && (
-        <div
-          className={`mb-4 px-4 py-2 rounded-md text-sm ${
-            toast.type === "success"
-              ? "bg-success/10 text-success border border-success/20"
-              : "bg-destructive/10 text-destructive border border-destructive/20"
-          }`}
-        >
-          {toast.message}
-          <button
-            onClick={() => setToast(null)}
-            className="ml-3 text-xs opacity-70 hover:opacity-100"
-          >
-            dismiss
-          </button>
-        </div>
-      )}
-
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

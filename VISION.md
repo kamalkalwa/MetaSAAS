@@ -4,6 +4,11 @@
 > The goal is if I want to launch a production-grade application at scale with all the
 > best practices, it should be in the least effort."
 
+**Related docs:**
+- [docs/ROADMAP.md](docs/ROADMAP.md) — Living technical roadmap (what's next, what's done, module status)
+- [docs/STRATEGY.md](docs/STRATEGY.md) — Strategic decisions, business model, licensing, revenue
+- [docs/CUSTOMER-ACQUISITION-PLAYBOOK.md](docs/CUSTOMER-ACQUISITION-PLAYBOOK.md) — Outreach templates, pricing, launch plan
+
 ---
 
 ## The Problem

@@ -160,8 +160,8 @@ describe("error isolation", () => {
     expect(failingHandler).toHaveBeenCalledOnce();
     expect(successHandler).toHaveBeenCalledOnce();
 
-    // Error was logged
-    expect(consoleSpy).toHaveBeenCalledOnce();
+    // Error was logged (once by event-bus, once by observability console provider)
+    expect(consoleSpy).toHaveBeenCalledTimes(2);
     expect(consoleSpy.mock.calls[0][0]).toContain("failing");
 
     consoleSpy.mockRestore();

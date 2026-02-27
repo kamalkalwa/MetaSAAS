@@ -608,6 +608,101 @@ export async function runPlatformMigrations() {
     );
     console.log("[migrate] Created platform table: webhook_deliveries");
   }
+
+  // Notifications — in-app notification center
+  const notificationsExists = await tableExists(pgSql, "notifications");
+  if (!notificationsExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        type VARCHAR(20) NOT NULL DEFAULT 'info',
+        link TEXT,
+        read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE INDEX idx_notifications_user ON notifications(tenant_id, user_id, created_at DESC)`
+    );
+    await pgSql.unsafe(
+      `CREATE INDEX idx_notifications_unread ON notifications(tenant_id, user_id, read) WHERE read = FALSE`
+    );
+    console.log("[migrate] Created platform table: notifications");
+  }
+
+  // Subscriptions — Stripe billing subscription records
+  const subscriptionsExists = await tableExists(pgSql, "subscriptions");
+  if (!subscriptionsExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL UNIQUE,
+        stripe_customer_id TEXT NOT NULL,
+        stripe_subscription_id TEXT UNIQUE,
+        status VARCHAR(50) NOT NULL DEFAULT 'active',
+        plan_id TEXT NOT NULL,
+        plan_name TEXT NOT NULL,
+        current_period_start TIMESTAMPTZ,
+        current_period_end TIMESTAMPTZ,
+        cancel_at_period_end BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log("[migrate] Created platform table: subscriptions");
+  }
+
+  // Invoices — Stripe invoice records
+  const invoicesExists = await tableExists(pgSql, "invoices");
+  if (!invoicesExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE invoices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        stripe_invoice_id TEXT NOT NULL UNIQUE,
+        amount_due INTEGER NOT NULL,
+        amount_paid INTEGER NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'usd',
+        status VARCHAR(50) NOT NULL,
+        invoice_url TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log("[migrate] Created platform table: invoices");
+  }
+
+  // Plans — subscription tier definitions (admin-managed)
+  const plansExists = await tableExists(pgSql, "plans");
+  if (!plansExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE plans (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        price_cents INTEGER NOT NULL DEFAULT 0,
+        currency VARCHAR(10) NOT NULL DEFAULT 'usd',
+        interval VARCHAR(20) NOT NULL DEFAULT 'month',
+        stripe_price_id TEXT,
+        features JSONB NOT NULL DEFAULT '[]',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE UNIQUE INDEX idx_plans_stripe_price ON plans(stripe_price_id) WHERE stripe_price_id IS NOT NULL`
+    );
+    await pgSql.unsafe(
+      `CREATE INDEX idx_plans_active_sort ON plans(is_active, sort_order)`
+    );
+    console.log("[migrate] Created platform table: plans");
+  }
 }
 
 /**

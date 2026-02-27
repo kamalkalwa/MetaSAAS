@@ -8,6 +8,23 @@
 // Config
 export { loadConfig, type AppConfig } from "./core/config/index.js";
 
+// Licensing
+export {
+  initLicensing,
+  isFeatureEnabled,
+  requireFeature,
+  getEnabledFeatures,
+  getLicenseInfo,
+  resetLicensing,
+  setEnabledFeatures,
+  FeatureLockedError,
+  FEATURES,
+  FREE_FEATURES,
+  PRO_FEATURES,
+  type Feature,
+  type LicensePayload,
+} from "./core/licensing/index.js";
+
 // Database
 export { initDatabase, getDatabase, closeDatabase } from "./core/database/connection.js";
 export { buildTableSchema, getTableSchema, getAllTableSchemas, toTableName, toColumnName, fromColumnName, clearTableRegistry } from "./core/database/schema-builder.js";
@@ -64,8 +81,48 @@ export {
   type WriteResult,
 } from "./ai/index.js";
 
+// Entity Installer (runtime hot-install)
+export {
+  installEntity,
+  installEntities,
+  type InstallResult,
+} from "./ai/index.js";
+
+// Email
+export {
+  initEmail,
+  sendEmail,
+  getEmailProvider,
+  setEmailProvider,
+  registerEmailTrigger,
+  resetEmail,
+  ConsoleEmailProvider,
+  ResendEmailProvider,
+  type EmailProvider,
+  type SendEmailOptions,
+  type SendResult,
+  type EmailTrigger,
+} from "./core/email/index.js";
+
+// File Storage
+export {
+  initStorage,
+  uploadFile,
+  getFileUrl,
+  deleteFile,
+  fileExists,
+  getStorageProvider,
+  setStorageProvider,
+  resetStorage,
+  LocalStorageProvider,
+  S3StorageProvider,
+  type StorageProvider,
+  type UploadOptions,
+  type UploadResult,
+} from "./core/storage/index.js";
+
 // Audit Logging
-export { writeAuditLog } from "./core/audit/index.js";
+export { writeAuditLog, queryAuditLog, type AuditLogQuery, type AuditLogEntry, type AuditLogResult } from "./core/audit/index.js";
 
 // Webhooks
 export {
@@ -90,6 +147,84 @@ export {
   type ChatSession,
   type ChatMessageRecord,
 } from "./ai/index.js";
+
+// Notifications
+export {
+  initNotifications,
+  sendNotification,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getNotificationProvider,
+  setNotificationProvider,
+  resetNotifications,
+  ConsoleNotificationProvider,
+  InAppNotificationProvider,
+  type NotificationProvider,
+  type Notification,
+  type NotificationInput,
+  type NotificationType,
+  type NotificationListOptions,
+  type NotificationListResult,
+} from "./core/notifications/index.js";
+export { notificationPlugin } from "./core/notifications/notification-plugin.js";
+
+// Billing
+export {
+  initBilling,
+  getBillingProvider,
+  setBillingProvider,
+  resetBilling,
+  ConsoleBillingProvider,
+  StripeBillingProvider,
+  type BillingProvider,
+  type Subscription,
+  type Invoice,
+  type CheckoutParams,
+  type CheckoutResult,
+  type PortalParams,
+  type WebhookResult,
+} from "./core/billing/index.js";
+export { billingPlugin } from "./core/billing/billing-plugin.js";
+export {
+  listPlans,
+  getPlan,
+  createPlan,
+  updatePlan,
+  deletePlan,
+  seedDefaultPlans,
+  type Plan,
+  type CreatePlanInput,
+  type UpdatePlanInput,
+} from "./core/billing/plans.js";
+
+// Observability
+export {
+  initObservability,
+  captureException,
+  captureMessage,
+  setObservabilityContext,
+  flushObservability,
+  getObservabilityProvider,
+  setObservabilityProvider,
+  resetObservability,
+  ConsoleObservabilityProvider,
+  SentryObservabilityProvider,
+  type ObservabilityProvider,
+  type ObservabilityContext,
+  type ObservabilitySeverity,
+} from "./core/observability/index.js";
+
+// Plugins
+export {
+  initPlugins,
+  registerPluginRoutes,
+  getPlugin,
+  getRegisteredPlugins,
+  resetPlugins,
+  type MetaSAASPlugin,
+  type PluginContext,
+} from "./core/plugins/index.js";
 
 // Adapters
 export { registerRESTRoutes } from "./adapters/rest/adapter.js";

@@ -7,6 +7,7 @@
  */
 
 import type { Logger } from "@metasaas/contracts";
+import { captureMessage } from "../../observability/index.js";
 
 /**
  * Creates a simple structured logger.
@@ -23,11 +24,13 @@ export function createLogger(context: string): Logger {
       console.warn(
         JSON.stringify({ level: "warn", context, message, ...data })
       );
+      captureMessage(`[${context}] ${message}`, "warning", data);
     },
     error(message, data) {
       console.error(
         JSON.stringify({ level: "error", context, message, ...data })
       );
+      captureMessage(`[${context}] ${message}`, "error", data);
     },
     debug(message, data) {
       if (process.env.NODE_ENV !== "production") {

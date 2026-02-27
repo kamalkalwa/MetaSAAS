@@ -3,12 +3,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { fetchEntityMeta, fetchEntityList, fetchTransitions, createEntity, updateEntity, deleteEntity } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { SearchFilterBar, BulkActionsBar, DataTable, ImportModal, Pagination, useToast, ConfirmDialog, ListSkeleton, EmptyState } from "@metasaas/ui";
-import { KanbanView } from "@/components/kanban-view";
-import { CalendarView } from "@/components/calendar-view";
 import type { EntityDefinition } from "@metasaas/contracts";
+
+const KanbanView = dynamic(
+  () => import("@/components/kanban-view").then((m) => ({ default: m.KanbanView })),
+  { loading: () => <ListSkeleton /> }
+);
+const CalendarView = dynamic(
+  () => import("@/components/calendar-view").then((m) => ({ default: m.CalendarView })),
+  { loading: () => <ListSkeleton /> }
+);
 
 /** Supported view types */
 type ViewType = "list" | "kanban" | "calendar";

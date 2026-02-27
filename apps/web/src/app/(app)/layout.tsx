@@ -3,11 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { fetchAllEntityMeta } from "@/lib/api-client";
-import { ChatSidebar } from "@/components/chat-sidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { NotificationBell } from "@/components/notification-bell";
+import { CommandPalette } from "@/components/command-palette";
+
+const ChatSidebar = dynamic(
+  () => import("@/components/chat-sidebar").then((m) => ({ default: m.ChatSidebar })),
+  { ssr: false }
+);
 import type { EntityDefinition } from "@metasaas/contracts";
 
 /**
@@ -22,6 +29,9 @@ function Icon({ name, className }: { name: string; className?: string }) {
     "layout-dashboard": "M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z",
     "folder-kanban": "M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2zM8 10v4M12 10v2M16 10v6",
     "check-square": "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+    activity: "M22 12h-4l-3 9L9 3l-3 9H2",
+    settings: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
+    "credit-card": "M1 10h22M1 6a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6z",
     package: "M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z",
   };
 
@@ -97,6 +107,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       href: `/${e.pluralName.toLowerCase()}`,
       icon: e.ui.icon,
     })),
+    { label: "Activity", href: "/activity", icon: "activity" },
+    { label: "Billing", href: "/billing", icon: "credit-card" },
   ];
 
   return (
@@ -104,10 +116,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-sidebar flex flex-col">
         {/* Logo */}
-        <div className="h-14 flex items-center px-6 border-b border-sidebar-border">
+        <div className="h-14 flex items-center justify-between px-6 border-b border-sidebar-border">
           <span className="text-lg font-semibold tracking-tight">
             MetaSAAS
           </span>
+          <NotificationBell />
         </div>
 
         {/* Command Bar shortcut hint */}
@@ -163,9 +176,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent text-accent-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
               >
@@ -178,29 +191,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border space-y-3">
-          {/* Dark mode toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              const html = document.documentElement;
-              const wasDark = html.classList.contains("dark");
-              html.classList.remove("dark", "light");
-              if (wasDark) {
-                html.classList.add("light");
-                localStorage.setItem("metasaas:theme", "light");
-              } else {
-                html.classList.add("dark");
-                localStorage.setItem("metasaas:theme", "dark");
-              }
-            }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+          {/* Settings link */}
+          <Link
+            href="/settings"
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              pathname === "/settings"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            )}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="4" />
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-            </svg>
-            Toggle theme
-          </button>
+            <Icon name="settings" />
+            Settings
+          </Link>
 
           {authEnabled && user && (
             <div className="flex items-center justify-between">
@@ -219,7 +222,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div className="text-xs text-muted-foreground">
-            MetaSAAS v0.0.1
+            MetaSAAS v0.0.2
           </div>
         </div>
       </aside>
@@ -237,6 +240,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ErrorBoundary fallbackMessage="The AI assistant encountered an error. Click retry to reload it.">
         <ChatSidebar />
       </ErrorBoundary>
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette />
     </div>
   );
 }

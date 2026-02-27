@@ -88,6 +88,9 @@ function buildColumn(field: FieldDefinition) {
       return timestamp(colName, { withTimezone: true });
     case "boolean":
       return boolean(colName);
+    case "file":
+      // Store the file key (e.g. "contacts/avatar/uuid.png") — actual file lives in storage
+      return text(colName);
     case "enum":
       // Store as text — validation happens at the Action Bus level
       return varchar(colName, { length: 255 });

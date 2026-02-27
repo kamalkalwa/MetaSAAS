@@ -1,6 +1,6 @@
 {
   "name": "@metasaas/ui",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Shared UI components and page patterns",
   "main": "./src/index.ts",
@@ -8,7 +8,10 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@metasaas/contracts": "workspace:*",
@@ -16,11 +19,15 @@
     "lucide-react": "^0.475",
     "react": "^19",
     "react-dom": "^19",
+    "sonner": "^2",
     "tailwind-merge": "^3"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "jsdom": "^28.1.0",
     "typescript": "^5.7"
   }
 }

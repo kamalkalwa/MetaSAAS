@@ -28,6 +28,11 @@ export {
   type WriteResult,
 } from "./entity-generator.js";
 export {
+  installEntity,
+  installEntities,
+  type InstallResult,
+} from "./entity-installer.js";
+export {
   createSession,
   getSession,
   listSessions,

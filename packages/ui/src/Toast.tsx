@@ -1,113 +1,69 @@
 /**
- * Toast — lightweight global notification system.
+ * Toast — global notification system powered by Sonner.
  *
- * Usage:
- *   1. Render <ToastContainer /> once at the app root
- *   2. Call toast("Record saved") or toast.error("Failed") from anywhere
+ * Wraps Sonner (3KB gzip) while preserving the exact same public API:
  *
- * Design:
- *   - Auto-dismisses after 3s (configurable)
- *   - Stacks from bottom-right
- *   - Supports success (default), error, and info variants
- *   - Enter/exit animations via CSS transitions
- *   - Max 5 visible toasts (oldest dismissed first)
+ *   - toast("message")        → success variant
+ *   - toast.error("message")  → error variant
+ *   - toast.info("message")   → info variant
+ *   - <ToastProvider>         → wraps <Toaster /> with theme integration
+ *   - useToast()              → returns the callable toast function
+ *
+ * All existing consumers require zero changes.
  */
 
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+"use client";
 
-type ToastVariant = "success" | "error" | "info";
+import { Toaster, toast as sonnerToast } from "sonner";
+import { createContext, useContext } from "react";
 
-interface ToastItem {
-  id: number;
-  message: string;
-  variant: ToastVariant;
-  exiting: boolean;
+type ToastFn = {
+  (message: string): void;
+  error: (message: string) => void;
+  info: (message: string) => void;
+};
+
+function createToastFn(): ToastFn {
+  const fn = ((message: string) => {
+    sonnerToast.success(message);
+  }) as ToastFn;
+
+  fn.error = (message: string) => {
+    sonnerToast.error(message);
+  };
+
+  fn.info = (message: string) => {
+    sonnerToast.info(message);
+  };
+
+  return fn;
 }
 
-interface ToastContextValue {
-  addToast: (message: string, variant?: ToastVariant) => void;
-}
+const toastFn = createToastFn();
 
-const ToastContext = createContext<ToastContextValue | null>(null);
-
-const MAX_TOASTS = 5;
-const AUTO_DISMISS_MS = 3000;
-const EXIT_ANIMATION_MS = 200;
-
-let nextId = 0;
+const ToastContext = createContext<ToastFn | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const addToast = useCallback((message: string, variant: ToastVariant = "success") => {
-    const id = ++nextId;
-    setToasts((prev) => {
-      const updated = [...prev, { id, message, variant, exiting: false }];
-      if (updated.length > MAX_TOASTS) {
-        return updated.slice(updated.length - MAX_TOASTS);
-      }
-      return updated;
-    });
-
-    setTimeout(() => {
-      setToasts((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
-      );
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, EXIT_ANIMATION_MS);
-    }, AUTO_DISMISS_MS);
-  }, []);
-
-  const dismiss = useCallback((id: number) => {
-    setToasts((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
-    );
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, EXIT_ANIMATION_MS);
-  }, []);
-
   return (
-    <ToastContext.Provider value={{ addToast }}>
+    <ToastContext.Provider value={toastFn}>
       {children}
-      <div
-        className="fixed bottom-4 right-4 z-[100] flex flex-col-reverse gap-2 pointer-events-none"
-        aria-live="polite"
-      >
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            role="alert"
-            onClick={() => dismiss(t.id)}
-            className={`pointer-events-auto max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm font-medium cursor-pointer transition-all duration-200 ${
-              t.exiting
-                ? "opacity-0 translate-x-4"
-                : "opacity-100 translate-x-0"
-            } ${variantStyles[t.variant]}`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="shrink-0">{variantIcons[t.variant]}</span>
-              <span>{t.message}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 3000,
+          classNames: {
+            toast: "!bg-card !text-foreground !border-border !shadow-lg",
+            success: "!bg-success !text-success-foreground",
+            error: "!bg-destructive !text-destructive-foreground",
+            info: "!bg-card !text-foreground !border-border",
+          },
+        }}
+        gap={8}
+        visibleToasts={5}
+      />
     </ToastContext.Provider>
   );
 }
-
-const variantStyles: Record<ToastVariant, string> = {
-  success: "bg-success text-success-foreground",
-  error: "bg-destructive text-destructive-foreground",
-  info: "bg-card text-foreground border border-border",
-};
-
-const variantIcons: Record<ToastVariant, string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
-};
 
 /**
  * Hook to show toasts from any component.
@@ -118,12 +74,8 @@ const variantIcons: Record<ToastVariant, string> = {
  * toast.error("Something failed");
  * toast.info("3 records selected");
  */
-export function useToast() {
+export function useToast(): ToastFn {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within <ToastProvider>");
-
-  const fn = (message: string) => ctx.addToast(message, "success");
-  fn.error = (message: string) => ctx.addToast(message, "error");
-  fn.info = (message: string) => ctx.addToast(message, "info");
-  return fn;
+  return ctx;
 }

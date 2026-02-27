@@ -38,9 +38,11 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<RecentRecord[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      setError(null);
       try {
         const ents = await fetchAllEntityMeta();
         setEntities(ents);
@@ -103,6 +105,7 @@ export default function DashboardPage() {
         setRecent(allRecent.slice(0, 8));
       } catch (err) {
         console.error("Dashboard load failed:", err);
+        setError("Failed to load dashboard data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -112,6 +115,56 @@ export default function DashboardPage() {
 
   const totalRecords = Object.values(counts).reduce((sum, c) => sum + c, 0);
   const isEmpty = totalRecords === 0 && !loading;
+
+  if (error) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center space-y-3">
+          <p className="text-sm text-destructive">{error}</p>
+          <button
+            type="button"
+            onClick={() => { setLoading(true); setError(null); window.location.reload(); }}
+            className="text-sm px-4 py-2 rounded-md border border-input hover:bg-accent/50 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+        {/* Skeleton entity cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-5 rounded-lg border border-border bg-card animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-20 bg-muted rounded" />
+                <div className="h-7 w-10 bg-muted rounded" />
+              </div>
+              <div className="h-3 w-32 bg-muted rounded mt-3" />
+            </div>
+          ))}
+        </div>
+        {/* Skeleton activity rows */}
+        <div className="border border-border rounded-lg divide-y divide-border">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3 animate-pulse">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="h-3 w-16 bg-muted rounded" />
+              </div>
+              <div className="h-3 w-20 bg-muted rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
