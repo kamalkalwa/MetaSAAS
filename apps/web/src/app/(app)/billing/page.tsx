@@ -104,6 +104,7 @@ function PlanCard({
               strokeLinecap="round"
               strokeLinejoin="round"
               className="text-primary mt-0.5 shrink-0"
+            aria-hidden="true"
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -122,12 +123,18 @@ function PlanCard({
           onClick={onSelect}
           disabled={disabled}
           className={cn(
-            "w-full px-4 py-2.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50",
+            "w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50",
             isRecommended
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "border border-input hover:bg-accent/50"
           )}
         >
+          {disabled && (
+            <svg className="animate-spin h-3.5 w-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          )}
           {disabled ? "Redirecting..." : `Choose ${plan.name}`}
         </button>
       )}
@@ -236,8 +243,14 @@ export default function BillingPage() {
               type="button"
               onClick={openPortal}
               disabled={actionLoading}
-              className="text-sm px-4 py-2 rounded-md border border-input hover:bg-accent/50 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-input hover:bg-accent/50 transition-colors disabled:opacity-50"
             >
+              {actionLoading && (
+                <svg className="animate-spin h-3.5 w-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
               Manage Subscription
             </button>
             {subscription.status === "active" && !subscription.cancelAtPeriodEnd && (
@@ -329,9 +342,11 @@ export default function BillingPage() {
                           href={inv.invoiceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-primary hover:text-primary/80 transition-colors"
+                          className="text-xs text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
+                          aria-label="View invoice (opens in new tab)"
                         >
                           View
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                         </a>
                       )}
                     </td>

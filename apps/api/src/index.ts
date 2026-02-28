@@ -101,7 +101,23 @@ async function main() {
 }
 
 main().catch(async (err) => {
-  console.error("Fatal error:", err);
+  // Detect database connection failure (AggregateError from node:net)
+  const isDbDown =
+    err?.code === "ECONNREFUSED" ||
+    (Array.isArray(err?.errors) &&
+      err.errors.some((e: { code?: string }) => e.code === "ECONNREFUSED"));
+
+  if (isDbDown) {
+    const dbUrl = process.env.DATABASE_URL ?? "postgresql://localhost:5433/metasaas";
+    console.error(
+      "\n  ❌  Cannot connect to PostgreSQL — is the database running?\n" +
+      `     Expected at: ${dbUrl}\n` +
+      "     Fix:         docker compose up -d\n"
+    );
+  } else {
+    console.error("Fatal error:", err);
+  }
+
   captureException(err instanceof Error ? err : new Error(String(err)));
   await flushObservability(2000).catch(() => {});
   process.exit(1);

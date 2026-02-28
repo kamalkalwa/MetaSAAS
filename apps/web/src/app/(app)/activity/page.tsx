@@ -48,7 +48,7 @@ export default function ActivityPage() {
       setTotal(result.total);
       if (entities.length === 0) setEntities(entityMeta);
     } catch (err) {
-      console.error("Failed to load audit log:", err);
+      console.warn("Failed to load audit log:", err);
       setError("Failed to load activity data. Please try again.");
     } finally {
       setLoading(false);
@@ -114,9 +114,21 @@ export default function ActivityPage() {
             </button>
           </div>
         ) : loading ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">
-            Loading activity...
-          </div>
+          // Skeleton rows while loading
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-muted shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 w-20 bg-muted rounded" />
+                    <div className="h-3 w-14 bg-muted rounded" />
+                  </div>
+                </div>
+                <div className="h-3 w-12 bg-muted rounded shrink-0" />
+              </div>
+            </div>
+          ))
         ) : entries.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             No activity recorded yet
@@ -144,6 +156,8 @@ export default function ActivityPage() {
                       "h-2 w-2 rounded-full shrink-0",
                       entry.success ? "bg-green-500" : "bg-red-500"
                     )}
+                    aria-label={entry.success ? "Success" : "Failed"}
+                    role="img"
                   />
 
                   {/* Action info */}
@@ -223,9 +237,15 @@ export default function ActivityPage() {
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="text-sm px-3 py-1.5 rounded-md border border-input hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page === 0 || loading}
+            className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-md border border-input hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            {loading && page > 0 && (
+              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
             Previous
           </button>
           <span className="text-xs text-muted-foreground">
@@ -234,10 +254,16 @@ export default function ActivityPage() {
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="text-sm px-3 py-1.5 rounded-md border border-input hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={page >= totalPages - 1 || loading}
+            className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-md border border-input hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
+            {loading && page < totalPages - 1 && (
+              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
           </button>
         </div>
       )}

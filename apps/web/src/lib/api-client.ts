@@ -10,7 +10,7 @@
  *   When no provider is set (dev mode), requests are sent without a token.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
 
 /**
  * Token provider function — returns the current JWT or null.

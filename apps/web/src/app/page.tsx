@@ -53,9 +53,11 @@ export default function LandingPage() {
               href="https://github.com/kamalkalwa/MetaSAAS"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-3 rounded-md border border-border font-medium hover:bg-muted transition-colors"
+              className="px-6 py-3 rounded-md border border-border font-medium hover:bg-muted transition-colors inline-flex items-center gap-2"
+              aria-label="View source on GitHub (opens in new tab)"
             >
               GitHub
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
@@ -160,7 +162,7 @@ export default function LandingPage() {
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="text-success mt-0.5 shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </span>
@@ -168,12 +170,12 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <a
-              href="#"
+            <Link
+              href="/signup"
               className="block w-full px-6 py-3 rounded-md bg-primary text-primary-foreground font-medium text-center hover:bg-primary/90 transition-colors"
             >
-              Buy Now
-            </a>
+              Get Early Access →
+            </Link>
             <p className="text-xs text-muted-foreground mt-3">
               Instant access. 30-day money-back guarantee.
             </p>
@@ -229,6 +231,7 @@ function FeatureCard({
           strokeLinecap="round"
           strokeLinejoin="round"
           className="text-primary"
+          aria-hidden="true"
         >
           <path d={icon} />
         </svg>
