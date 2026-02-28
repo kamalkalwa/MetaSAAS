@@ -9,6 +9,7 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useSettings, type UserSettings } from "@/lib/use-settings";
+import { useToast } from "@metasaas/ui";
 import { cn } from "@/lib/utils";
 
 function Section({
@@ -81,6 +82,7 @@ function Toggle({
         onClick={() => onChange(!checked)}
         className={cn(
           "relative inline-flex h-5 w-9 items-center shrink-0 rounded-full transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           checked ? "bg-primary" : "bg-muted"
         )}
       >
@@ -98,6 +100,7 @@ function Toggle({
 export default function SettingsPage() {
   const { user, authEnabled } = useAuth();
   const { settings, setTheme, setNotificationPref } = useSettings();
+  const toast = useToast();
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
@@ -120,7 +123,7 @@ export default function SettingsPage() {
           <div>
             <span className="text-muted-foreground">Auth Provider</span>
             <p className="font-medium mt-0.5">
-              {authEnabled ? "Supabase" : "Disabled (dev mode)"}
+              {authEnabled ? "Supabase" : "Dev mode (no auth)"}
             </p>
           </div>
           {user?.id && (
@@ -137,9 +140,9 @@ export default function SettingsPage() {
       {/* Theme */}
       <Section title="Theme" description="Choose your preferred appearance">
         <div className="flex gap-3">
-          <ThemeOption label="Light" value="light" current={settings.theme} onSelect={setTheme} />
-          <ThemeOption label="Dark" value="dark" current={settings.theme} onSelect={setTheme} />
-          <ThemeOption label="System" value="system" current={settings.theme} onSelect={setTheme} />
+          <ThemeOption label="Light" value="light" current={settings.theme} onSelect={(v) => { setTheme(v); toast("Theme updated"); }} />
+          <ThemeOption label="Dark" value="dark" current={settings.theme} onSelect={(v) => { setTheme(v); toast("Theme updated"); }} />
+          <ThemeOption label="System" value="system" current={settings.theme} onSelect={(v) => { setTheme(v); toast("Theme updated"); }} />
         </div>
       </Section>
 
@@ -152,17 +155,17 @@ export default function SettingsPage() {
           <Toggle
             label="Record created"
             checked={settings.notifications.onCreate}
-            onChange={(v) => setNotificationPref("onCreate", v)}
+            onChange={(v) => { setNotificationPref("onCreate", v); toast("Notification preference saved"); }}
           />
           <Toggle
             label="Record updated"
             checked={settings.notifications.onUpdate}
-            onChange={(v) => setNotificationPref("onUpdate", v)}
+            onChange={(v) => { setNotificationPref("onUpdate", v); toast("Notification preference saved"); }}
           />
           <Toggle
             label="Record deleted"
             checked={settings.notifications.onDelete}
-            onChange={(v) => setNotificationPref("onDelete", v)}
+            onChange={(v) => { setNotificationPref("onDelete", v); toast("Notification preference saved"); }}
           />
         </div>
       </Section>

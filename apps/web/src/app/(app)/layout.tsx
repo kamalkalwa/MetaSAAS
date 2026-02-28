@@ -49,6 +49,7 @@ function Icon({ name, className }: { name: string; className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      aria-hidden="true"
     >
       <path d={path} />
     </svg>
@@ -75,7 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchAllEntityMeta()
       .then(setEntities)
-      .catch((err) => console.error("Failed to load entity metadata:", err));
+      .catch((err) => console.warn("Failed to load entity metadata:", err));
   }, []);
 
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
             </svg>
@@ -175,6 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150",
                   isActive
@@ -194,6 +197,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Settings link */}
           <Link
             href="/settings"
+            aria-current={pathname === "/settings" ? "page" : undefined}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
               pathname === "/settings"

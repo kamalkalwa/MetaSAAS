@@ -19,16 +19,23 @@ export function NotificationBell() {
   const { notifications, unreadCount, loading, markRead, markAllRead } =
     useNotifications();
 
-  // Close on outside click
+  // Close on outside click or Escape
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     if (open) {
       document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("mousedown", handleClick);
+        document.removeEventListener("keydown", handleKeyDown);
+      };
     }
   }, [open]);
 
@@ -53,12 +60,13 @@ export function NotificationBell() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          aria-hidden="true"
         >
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -84,8 +92,17 @@ export function NotificationBell() {
           {/* Notification list */}
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Loading...
+              <div className="py-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-3 animate-pulse">
+                    <div className="mt-1.5 h-2 w-2 rounded-full bg-muted shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-32 bg-muted rounded" />
+                      <div className="h-2.5 w-48 bg-muted rounded" />
+                    </div>
+                    <div className="h-2.5 w-8 bg-muted rounded shrink-0" />
+                  </div>
+                ))}
               </div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">

@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchAllEntityMeta, fetchEntityList } from "@/lib/api-client";
-import { formatValue, columnToLabel } from "@/lib/utils";
+import { timeAgo, columnToLabel } from "@/lib/utils";
 import type { EntityDefinition } from "@metasaas/contracts";
 import Link from "next/link";
 
@@ -104,7 +104,7 @@ export default function DashboardPage() {
         allRecent.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         setRecent(allRecent.slice(0, 8));
       } catch (err) {
-        console.error("Dashboard load failed:", err);
+        console.warn("Dashboard load failed:", err);
         setError("Failed to load dashboard data. Please try again.");
       } finally {
         setLoading(false);
@@ -167,8 +167,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3 mb-8">
@@ -255,7 +255,11 @@ export default function DashboardPage() {
                   </div>
                   {/* State bar */}
                   {total > 0 && (
-                    <div className="flex rounded-full overflow-hidden h-2 mb-3 bg-muted">
+                    <div
+                      className="flex rounded-full overflow-hidden h-2 mb-3 bg-muted"
+                      role="img"
+                      aria-label={Object.entries(wf.states).filter(([,c]) => c > 0).map(([s, c]) => `${columnToLabel(s)}: ${c}`).join(", ")}
+                    >
                       {Object.entries(wf.states).map(([state, count], idx) => {
                         if (count === 0) return null;
                         const colors = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
@@ -300,7 +304,7 @@ export default function DashboardPage() {
                   <span className="text-xs text-muted-foreground ml-2">{r.entityName}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {formatValue(r.updatedAt)}
+                  {timeAgo(r.updatedAt)}
                 </span>
               </Link>
             ))}
