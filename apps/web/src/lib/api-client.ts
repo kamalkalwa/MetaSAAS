@@ -19,6 +19,16 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
 let tokenProvider: (() => string | null) | null = null;
 
 /**
+ * Active workspace ID — sent via X-Workspace-Id header to override tenant.
+ */
+let activeWorkspaceId: string | null = null;
+
+/** Set the active workspace for all subsequent API calls. */
+export function setActiveWorkspace(id: string | null): void {
+  activeWorkspaceId = id;
+}
+
+/**
  * Register a function that returns the current auth token.
  * Called once from the AuthProvider when it mounts.
  */
@@ -39,6 +49,7 @@ interface ActionResponse<T = unknown> {
 /**
  * Makes a typed request to the API.
  * Automatically attaches the Bearer token if a token provider is registered.
+ * Retries once on 5xx or network errors with a 1s delay.
  */
 async function request<T>(
   path: string,
@@ -55,14 +66,32 @@ async function request<T>(
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+  if (activeWorkspaceId) {
+    headers["X-Workspace-Id"] = activeWorkspaceId;
+  }
 
-  const res = await fetch(url, {
+  const fetchOpts: RequestInit = {
     headers: {
       ...headers,
       ...(options?.headers as Record<string, string>),
     },
     ...options,
-  });
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, fetchOpts);
+  } catch (networkError) {
+    // Network failure — retry once after 1s
+    await new Promise((r) => setTimeout(r, 1000));
+    res = await fetch(url, fetchOpts);
+  }
+
+  // Retry once on 5xx server errors
+  if (res.status >= 500) {
+    await new Promise((r) => setTimeout(r, 1000));
+    res = await fetch(url, fetchOpts);
+  }
 
   if (!res.ok) {
     // Handle expired or invalid JWT tokens.
@@ -358,6 +387,9 @@ export async function sendCommandStream(
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
+  if (activeWorkspaceId) {
+    headers["X-Workspace-Id"] = activeWorkspaceId;
+  }
 
   const res = await fetch(`${API_BASE}/api/ai/command/stream`, {
     method: "POST",
@@ -443,6 +475,13 @@ export async function fetchEntityMeta(
   pluralName: string
 ): Promise<import("@metasaas/contracts").EntityDefinition> {
   return request(`/api/meta/entities/${pluralName}`);
+}
+
+/** Fetch workflow field distribution stats for an entity */
+export async function fetchEntityStats(
+  pluralName: string
+): Promise<ActionResponse<{ workflows: Record<string, Record<string, number>> }>> {
+  return request(`/api/entities/${pluralName}/stats`);
 }
 
 // ---------------------------------------------------------------
@@ -628,4 +667,34 @@ export async function createPortalSession(): Promise<{ url: string }> {
 export async function fetchInvoices(): Promise<InvoiceData[]> {
   const res: ActionResponse<InvoiceData[]> = await request("/api/billing/invoices");
   return res.data ?? [];
+}
+
+// ---------------------------------------------------------------
+// Workspaces
+// ---------------------------------------------------------------
+
+export interface WorkspaceData {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  created_at: string;
+}
+
+/** List workspaces the current user belongs to */
+export async function fetchWorkspaces(): Promise<WorkspaceData[]> {
+  const res: ActionResponse<WorkspaceData[]> = await request("/api/workspaces");
+  return res.data ?? [];
+}
+
+/** Create a new workspace */
+export async function createWorkspace(name: string): Promise<WorkspaceData> {
+  const res: ActionResponse<WorkspaceData> = await request("/api/workspaces", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  if (!res.success || !res.data) {
+    throw new Error(res.error ?? "Failed to create workspace");
+  }
+  return res.data;
 }

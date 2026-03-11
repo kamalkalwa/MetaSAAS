@@ -14,6 +14,7 @@ import {
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { FieldInput } from "@/components/field-input";
+import { useFormDraft } from "@/lib/use-form-draft";
 import { useToast, FormSkeleton } from "@metasaas/ui";
 import type { EntityDefinition, FieldDefinition } from "@metasaas/contracts";
 import type { RelationshipOption } from "@metasaas/ui";
@@ -56,6 +57,12 @@ export default function EntityEditPage() {
   /** Maps workflow field name → allowed next states (from /transitions API) */
   const [transitions, setTransitions] = useState<Record<string, string[]>>({});
   const toast = useToast();
+  const { clearDraft } = useFormDraft(
+    `${entitySlug}/${recordId}/edit`,
+    formData,
+    setFormData,
+    !loading && entity !== null
+  );
 
   useEffect(() => {
     async function load() {
@@ -182,6 +189,7 @@ export default function EntityEditPage() {
     try {
       const result = await updateEntity(entitySlug, recordId, data);
       if (result.success) {
+        clearDraft();
         toast("Changes saved");
         router.push(`/${entitySlug}/${recordId}`);
       } else {
