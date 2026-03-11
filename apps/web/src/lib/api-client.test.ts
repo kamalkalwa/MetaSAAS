@@ -214,12 +214,16 @@ describe("error handling", () => {
   });
 
   it("throws with status code when body has no error message", async () => {
+    // First call returns 500, retry also returns 500
+    mockFetch.mockResolvedValueOnce(mockResponse({}, 500));
     mockFetch.mockResolvedValueOnce(mockResponse({}, 500));
 
     await expect(fetchEntityList("contacts")).rejects.toThrow("500");
   });
 
   it("throws when fetch itself fails (network error)", async () => {
+    // First call fails, retry also fails
+    mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
     mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
     await expect(fetchEntityList("contacts")).rejects.toThrow("Failed to fetch");

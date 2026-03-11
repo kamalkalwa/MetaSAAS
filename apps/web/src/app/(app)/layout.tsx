@@ -10,6 +10,7 @@ import { fetchAllEntityMeta } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { NotificationBell } from "@/components/notification-bell";
 import { CommandPalette } from "@/components/command-palette";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 const ChatSidebar = dynamic(
   () => import("@/components/chat-sidebar").then((m) => ({ default: m.ChatSidebar })),
@@ -124,8 +125,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </div>
 
+        {/* Workspace Switcher */}
+        <div className="px-3 pt-3">
+          <WorkspaceSwitcher />
+        </div>
+
         {/* Command Bar shortcut hint */}
-        <div className="px-3 pt-3 pb-1">
+        <div className="px-3 pt-2 pb-1">
           <button
             type="button"
             onClick={() => {

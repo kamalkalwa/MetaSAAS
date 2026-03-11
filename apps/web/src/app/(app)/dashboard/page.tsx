@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { fetchAllEntityMeta, fetchEntityList } from "@/lib/api-client";
+import { fetchAllEntityMeta, fetchEntityList, fetchEntityStats } from "@/lib/api-client";
 import { timeAgo, columnToLabel } from "@/lib/utils";
 import type { EntityDefinition } from "@metasaas/contracts";
 import Link from "next/link";
@@ -68,26 +68,30 @@ export default function DashboardPage() {
                   });
                 }
 
-                // Build workflow state counts
+                // Build workflow state counts via GROUP BY (no full-table fetch)
                 if (e.workflows?.length && res.data.total > 0) {
-                  const fullRes = await fetchEntityList(slug, { limit: "500" });
-                  if (fullRes.success && fullRes.data) {
-                    for (const wf of e.workflows) {
-                      const states: Record<string, number> = {};
-                      for (const opt of (e.fields.find((f) => f.name === wf.field)?.options ?? [])) {
-                        states[opt] = 0;
+                  try {
+                    const statsRes = await fetchEntityStats(slug);
+                    if (statsRes.success && statsRes.data) {
+                      for (const wf of e.workflows) {
+                        const states: Record<string, number> = {};
+                        for (const opt of (e.fields.find((f) => f.name === wf.field)?.options ?? [])) {
+                          states[opt] = 0;
+                        }
+                        const grouped = statsRes.data.workflows[wf.field] ?? {};
+                        for (const [val, count] of Object.entries(grouped)) {
+                          states[val] = count;
+                        }
+                        workflowSums.push({
+                          entityName: e.name,
+                          entitySlug: slug,
+                          field: wf.field,
+                          states,
+                        });
                       }
-                      for (const row of fullRes.data.data) {
-                        const val = row[wf.field] as string;
-                        if (val) states[val] = (states[val] ?? 0) + 1;
-                      }
-                      workflowSums.push({
-                        entityName: e.name,
-                        entitySlug: slug,
-                        field: wf.field,
-                        states,
-                      });
                     }
+                  } catch {
+                    // Non-critical — dashboard still works without workflow stats
                   }
                 }
               }

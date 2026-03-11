@@ -12,6 +12,7 @@ import {
 } from "@/lib/api-client";
 import { columnToLabel } from "@/lib/utils";
 import { FieldInput } from "@/components/field-input";
+import { useFormDraft } from "@/lib/use-form-draft";
 import { useToast, FormSkeleton } from "@metasaas/ui";
 import type { EntityDefinition, FieldDefinition } from "@metasaas/contracts";
 import type { RelationshipOption } from "@metasaas/ui";
@@ -55,6 +56,12 @@ export default function EntityCreatePage() {
     { field: FieldDefinition; fkName: string }[]
   >([]);
   const toast = useToast();
+  const { clearDraft } = useFormDraft(
+    `${entitySlug}/new`,
+    formData,
+    setFormData,
+    !loading && entity !== null
+  );
 
   useEffect(() => {
     async function load() {
@@ -179,6 +186,7 @@ export default function EntityCreatePage() {
     try {
       const result = await createEntity(entitySlug, data);
       if (result.success && result.data) {
+        clearDraft();
         toast(`${entity.name} created`);
         router.push(`/${entitySlug}/${result.data.id}`);
       } else {

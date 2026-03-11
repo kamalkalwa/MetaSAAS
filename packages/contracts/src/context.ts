@@ -153,4 +153,22 @@ export interface DatabaseClient {
     where?: Record<string, unknown>,
     search?: { term: string; fields: string[] }
   ): Promise<number>;
+
+  /**
+   * Count records grouped by a field's values.
+   * Returns a map of field value → count.
+   * Used for workflow state distribution without fetching all records.
+   */
+  countByField(
+    entity: string,
+    field: string,
+    where?: Record<string, unknown>
+  ): Promise<Record<string, number>>;
+
+  /**
+   * Execute multiple operations within a database transaction.
+   * If the callback throws, all changes are rolled back.
+   * The callback receives a transactional DatabaseClient.
+   */
+  transaction<T>(fn: (tx: DatabaseClient) => Promise<T>): Promise<T>;
 }

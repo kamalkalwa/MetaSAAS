@@ -675,6 +675,45 @@ export async function runPlatformMigrations() {
     console.log("[migrate] Created platform table: invoices");
   }
 
+  // Workspaces — multi-tenancy workspace management
+  const workspacesExists = await tableExists(pgSql, "workspaces");
+  if (!workspacesExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE workspaces (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE UNIQUE INDEX idx_workspaces_slug ON workspaces(slug)`
+    );
+    console.log("[migrate] Created platform table: workspaces");
+  }
+
+  // Workspace members — links users to workspaces with roles
+  const membersExists = await tableExists(pgSql, "workspace_members");
+  if (!membersExists) {
+    await pgSql.unsafe(`
+      CREATE TABLE workspace_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'member',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pgSql.unsafe(
+      `CREATE UNIQUE INDEX idx_workspace_members_unique ON workspace_members(workspace_id, user_id)`
+    );
+    await pgSql.unsafe(
+      `CREATE INDEX idx_workspace_members_user ON workspace_members(user_id)`
+    );
+    console.log("[migrate] Created platform table: workspace_members");
+  }
+
   // Plans — subscription tier definitions (admin-managed)
   const plansExists = await tableExists(pgSql, "plans");
   if (!plansExists) {

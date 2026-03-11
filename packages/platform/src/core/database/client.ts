@@ -64,16 +64,13 @@ function coerceValues(
 }
 
 /**
- * Creates a DatabaseClient instance scoped to a tenant.
- * Every query is automatically filtered by tenant_id for data isolation.
- * This is called by the Action Bus when constructing the ActionContext.
- *
- * @param tenantId - The tenant to scope all queries to. Required for data isolation.
+ * Builds a DatabaseClient using the provided Drizzle instance.
+ * Extracted so both the main client and transactional client share logic.
  */
-export function createDatabaseClient(tenantId: string): DatabaseClient {
-  return {
+function buildClient(tenantId: string, getDb: () => any): DatabaseClient {
+  const client: DatabaseClient = {
     async findMany(entityName, options) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -134,7 +131,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
     },
 
     async findById(entityName, id) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -148,7 +145,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
     },
 
     async create(entityName, data) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -167,7 +164,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
     },
 
     async update(entityName, id, data) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -190,7 +187,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
     },
 
     async delete(entityName, id) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -203,7 +200,7 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
     },
 
     async count(entityName, where, search) {
-      const { db } = getDatabase();
+      const db = getDb();
       const table = getTableSchema(entityName);
       if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
@@ -243,5 +240,64 @@ export function createDatabaseClient(tenantId: string): DatabaseClient {
       const rows = await query;
       return rows[0]?.count ?? 0;
     },
+
+    async countByField(entityName, field, where) {
+      const db = getDb();
+      const table = getTableSchema(entityName);
+      if (!table) throw new Error(`Unknown entity: ${entityName}`);
+
+      const colName = toColumnName(field);
+      if (!table[colName]) throw new Error(`Unknown field: ${field}`);
+
+      const col = table[colName];
+      const conditions: SQL[] = [eq(table.tenant_id, tenantId)];
+
+      if (where) {
+        for (const [key, value] of Object.entries(where)) {
+          const cn = toColumnName(key);
+          if (table[cn]) {
+            conditions.push(eq(table[cn], value as any));
+          }
+        }
+      }
+
+      const rows = await db
+        .select({
+          value: col,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(table)
+        .where(and(...conditions))
+        .groupBy(col);
+
+      const result: Record<string, number> = {};
+      for (const row of rows as { value: unknown; count: number }[]) {
+        if (row.value != null) {
+          result[String(row.value)] = row.count;
+        }
+      }
+      return result;
+    },
+
+    async transaction<T>(fn: (tx: DatabaseClient) => Promise<T>): Promise<T> {
+      const db = getDb();
+      return db.transaction(async (txDb: any) => {
+        const txClient = buildClient(tenantId, () => txDb);
+        return fn(txClient);
+      });
+    },
   };
+
+  return client;
+}
+
+/**
+ * Creates a DatabaseClient instance scoped to a tenant.
+ * Every query is automatically filtered by tenant_id for data isolation.
+ * This is called by the Action Bus when constructing the ActionContext.
+ *
+ * @param tenantId - The tenant to scope all queries to. Required for data isolation.
+ */
+export function createDatabaseClient(tenantId: string): DatabaseClient {
+  return buildClient(tenantId, () => getDatabase().db);
 }

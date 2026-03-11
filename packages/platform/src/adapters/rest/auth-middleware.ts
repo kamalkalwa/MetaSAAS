@@ -13,6 +13,7 @@
 
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { getAuthProvider } from "../../auth/index.js";
+import { getDatabase } from "../../core/database/connection.js";
 import type { Caller } from "@metasaas/contracts";
 
 /**
@@ -106,6 +107,26 @@ export async function authMiddleware(
         : "Authentication required. Provide a Bearer token in the Authorization header.",
     });
     return;
+  }
+
+  // Allow workspace override via X-Workspace-Id header.
+  // If present, validate membership and switch the caller's tenantId.
+  const workspaceId = request.headers["x-workspace-id"] as string | undefined;
+  if (workspaceId && caller) {
+    try {
+      const { sql: pgSql } = getDatabase();
+      const rows = await pgSql.unsafe(
+        `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`,
+        [workspaceId, caller.userId]
+      );
+      if (rows.length > 0) {
+        caller.tenantId = workspaceId;
+        caller.roles = [rows[0].role as string];
+      }
+      // If not a member, silently keep the default tenantId
+    } catch {
+      // DB not ready or table doesn't exist yet — use default tenant
+    }
   }
 
   // Attach the authenticated caller to the request

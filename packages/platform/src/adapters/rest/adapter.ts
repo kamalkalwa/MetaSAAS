@@ -44,6 +44,7 @@ import {
   markAllNotificationsRead,
 } from "../../core/notifications/index.js";
 import { queryAuditLog } from "../../core/audit/query.js";
+import { getDatabase } from "../../core/database/connection.js";
 import { installEntity } from "../../ai/entity-installer.js";
 import {
   createSession,
@@ -72,7 +73,7 @@ function isValidUUID(value: string): boolean {
  */
 const FALLBACK_CALLER: Caller = {
   userId: "anonymous",
-  tenantId: "default",
+  tenantId: "00000000-0000-0000-0000-000000000000",
   roles: [],
   type: "human",
 };
@@ -128,6 +129,64 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   });
 
   // ---------------------------------------------------------------
+  // Workspace management — multi-tenancy
+  // ---------------------------------------------------------------
+
+  /** GET /api/workspaces — List workspaces the current user belongs to */
+  app.get("/api/workspaces", async (request) => {
+    const caller = getCaller(request);
+    const { sql: pgSql } = getDatabase();
+
+    const rows = await pgSql.unsafe(
+      `SELECT w.id, w.name, w.slug, w.created_at, wm.role
+       FROM workspaces w
+       JOIN workspace_members wm ON wm.workspace_id = w.id
+       WHERE wm.user_id = $1
+       ORDER BY w.name`,
+      [caller.userId]
+    );
+
+    return { success: true, data: rows };
+  });
+
+  /** POST /api/workspaces — Create a new workspace */
+  app.post("/api/workspaces", async (request, reply) => {
+    const caller = getCaller(request);
+    const body = (request.body ?? {}) as { name?: string };
+
+    if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
+      return reply.status(400).send({ success: false, error: "name is required", errorType: "validation" });
+    }
+
+    const name = body.name.trim();
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+    const { sql: pgSql } = getDatabase();
+
+    // Check slug uniqueness
+    const existing = await pgSql.unsafe(
+      `SELECT id FROM workspaces WHERE slug = $1 LIMIT 1`,
+      [slug]
+    );
+    if (existing.length > 0) {
+      return reply.status(409).send({ success: false, error: "A workspace with this name already exists", errorType: "validation" });
+    }
+
+    const [workspace] = await pgSql.unsafe(
+      `INSERT INTO workspaces (name, slug) VALUES ($1, $2) RETURNING id, name, slug, created_at`,
+      [name, slug]
+    );
+
+    // Add creator as admin member
+    await pgSql.unsafe(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'admin')`,
+      [workspace.id, caller.userId]
+    );
+
+    return reply.status(201).send({ success: true, data: { ...workspace, role: "admin" } });
+  });
+
+  // ---------------------------------------------------------------
   // Meta endpoints (frontend reads these to render UI)
   // ---------------------------------------------------------------
 
@@ -142,7 +201,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const entity = getEntityByPlural(request.params.pluralName);
       if (!entity) {
-        return reply.status(404).send({ error: "Entity not found" });
+        return reply.status(404).send({ success: false, error: "Entity not found", errorType: "not_found" });
       }
       return entity;
     }
@@ -170,6 +229,34 @@ export async function registerRESTRoutes(app: FastifyInstance) {
       license: getLicenseInfo(),
     };
   });
+
+  /**
+   * GET /api/entities/:pluralName/stats — Workflow field distribution.
+   * Returns grouped counts for each workflow field, avoiding full-table fetch.
+   * This is NOT under /api/meta/ because it queries tenant-specific data and requires auth.
+   */
+  app.get<{ Params: { pluralName: string } }>(
+    "/api/entities/:pluralName/stats",
+    async (request, reply) => {
+      const entity = getEntityByPlural(request.params.pluralName);
+      if (!entity) {
+        return reply.status(404).send({ success: false, error: "Entity not found" });
+      }
+
+      const caller = getCaller(request);
+      const { createDatabaseClient } = await import("../../core/database/client.js"); // static import would cause circular dep
+      const db = createDatabaseClient(caller.tenantId);
+
+      const workflows: Record<string, Record<string, number>> = {};
+      if (entity.workflows?.length) {
+        for (const wf of entity.workflows) {
+          workflows[wf.field] = await db.countByField(entity.name, wf.field);
+        }
+      }
+
+      return { success: true, data: { workflows } };
+    }
+  );
 
   // ---------------------------------------------------------------
   // Entity Installer — hot-install entities at runtime
@@ -552,11 +639,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
         getCaller(request)
       );
 
-      if (!result.success) {
-        return reply.status(400).send(result);
-      }
-
-      return result;
+      return sendResult(reply, result);
     }
   );
 
@@ -584,6 +667,10 @@ export async function registerRESTRoutes(app: FastifyInstance) {
         allowedFilterFields.add(fk);
       }
     }
+    // Allow sorting by system timestamp fields
+    const allowedSortFields = new Set(allowedFilterFields);
+    allowedSortFields.add("createdAt");
+    allowedSortFields.add("updatedAt");
 
     /** GET /api/contacts — List all */
     app.get<{ Querystring: Record<string, string> }>(
@@ -625,12 +712,12 @@ export async function registerRESTRoutes(app: FastifyInstance) {
 
         // Validate orderBy against allowed fields
         if (orderBy) {
-          if (!allowedFilterFields.has(orderBy)) {
+          if (!allowedSortFields.has(orderBy)) {
             return reply.status(400).send({
               success: false,
               error: `Unknown orderBy field: "${orderBy}"`,
               details: {
-                allowedFields: Array.from(allowedFilterFields),
+                allowedFields: Array.from(allowedSortFields),
               },
             });
           }
@@ -1058,6 +1145,7 @@ export async function registerRESTRoutes(app: FastifyInstance) {
   // ---------------------------------------------------------------
 
   app.setErrorHandler(async (error, request, reply) => {
+    console.error(`[error] ${request.method} ${request.url}:`, error);
     captureException(error instanceof Error ? error : new Error(String(error)), {
       url: request.url,
       method: request.method,
@@ -1065,9 +1153,12 @@ export async function registerRESTRoutes(app: FastifyInstance) {
       tenantId: request.caller?.tenantId,
     });
 
+    const isDev = process.env.NODE_ENV !== "production";
     reply.status(500).send({
       success: false,
-      error: "An unexpected error occurred",
+      error: isDev && error instanceof Error ? error.message : "An unexpected error occurred",
+      errorType: "unknown",
+      ...(isDev && error instanceof Error ? { stack: error.stack } : {}),
     });
   });
 }
